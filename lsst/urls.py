@@ -12,6 +12,22 @@ import core.pandajob.views_support as core_lsstmon_support_views
 #import core.pandajob.views as core_lsstmon_views
 #import core.api.reprocessing.views as core_lsstmon_api_reprocessing_views
 
+import filebrowser
+from filebrowser import sites as fb_sites
+
+def filebrowser_urls():
+    """Returns urlpatterns for filebrowser.
+
+    The thing is that in v3.4 a lone filebrowser.urls ceased
+    to exist, since it was moved to FileBrowserSite.get_urls().
+    """
+
+    if filebrowser.VERSION < "3.4":
+        return filebrowser.urls
+    else:
+        return fb_sites.FileBrowserSite("pandamon").get_urls()
+
+
 urlpatterns = patterns('',
     url(r'^$', lsstmon_views.mainPage, name='mainPage'),
     url(r'^$', lsstmon_views.mainPage, name='index'),
@@ -49,7 +65,7 @@ urlpatterns = patterns('',
 
 
     ### filebrowser
-    url(r'^filebrowser/', include('filebrowser.urls'), name='filebrowser'),
+    url(r'^filebrowser/', include(filebrowser_urls()), name='filebrowser'),
     ### PanDA Brokerage Monitor
     url(r'^pbm/', include('pbm.urls'), name='pbm'),
     url(r'^status_summary/', include('core.status_summary.urls'), name='status_summary'),
