@@ -114,7 +114,7 @@ def setupSiteInfo():
         for f in ( 'siteid', 'status', 'tier', 'comment_field', 'cloud' ):
             pandaSites[site['siteid']][f] = site[f]
         homeCloud[site['siteid']] = site['cloud']
-        if site['catchall'].find('log_to_objectstore') >= 0 or site['objectstore'] != '':
+        if (site['catchall'] and site['catchall'].find('log_to_objectstore') >= 0) or site['objectstore'] != '':
             #print 'object store site', site['siteid'], site['catchall'], site['objectstore']
             try:
                 fpath = getFilePathForObjectStore(site['objectstore'],filetype="logs")
@@ -1976,7 +1976,7 @@ def siteInfo(request, site=''):
         siterec = None
     HPC = False
     njobhours = 12
-    if siterec.catchall.find('HPC') >= 0:
+    if siterec and siterec.catchall and siterec.catchall.find('HPC') >= 0:
         HPC = True
         njobhours = 48
 
