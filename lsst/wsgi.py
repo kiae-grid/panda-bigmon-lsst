@@ -17,7 +17,7 @@ from os.path import join, pardir, abspath, dirname, split
 
 virtualenvPath = None
 try:
-    from settings_bigpandamon_twrpm import VIRTUALENV_PATH
+    from settings_bigpandamon_lsst import VIRTUALENV_PATH
     virtualenvPath = VIRTUALENV_PATH
 except Exception, e:
     print "Export of VIRTUALENV_PATH from settings failed: %s" % (e)
@@ -30,7 +30,7 @@ site.addsitedir(virtualenvPath + '/lib/python%s/site-packages' % \
 
 wsgi_path = None
 try:
-    from settings_bigpandamon_twrpm import WSGI_PATH
+    from settings_bigpandamon_lsst import WSGI_PATH
     wsgi_path = WSGI_PATH
 except Exception, e:
     print "Export of WSGI_PATH from settings failed: %s" % (e)
