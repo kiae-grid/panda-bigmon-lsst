@@ -136,7 +136,8 @@ def initRequest(request):
     if len(hostname) > 0: request.session['hostname'] = hostname  
  
     ##self monitor
-    initSelfMonitor(request)
+    if "SELF_MONITOR" in os.environ:
+        initSelfMonitor(request)
 
     ## Set default page lifetime in the http header, for the use of the front end cache
     request.session['max_age_minutes'] = 3
@@ -1012,7 +1013,8 @@ def mainPage(request):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         response = render_to_response('lsst-mainPage.html', data, RequestContext(request))
         patch_response_headers(response, cache_timeout=request.session['max_age_minutes']*60)
         return response
@@ -1034,7 +1036,8 @@ def helpPage(request):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('completeHelp.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         return  HttpResponse('json', mimetype='text/html')
@@ -1258,7 +1261,8 @@ def jobList(request, mode=None, param=None):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         if eventservice:
             return render_to_response('jobListES.html', data, RequestContext(request))
         else:
@@ -1334,7 +1338,8 @@ def jobInfo(request, pandaid=None, batchid=None, p2=None, p3=None, p4=None):
             'jobid' : jobid,
         }
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('jobInfo.html', data, RequestContext(request))
 
     job = {}
@@ -1578,7 +1583,8 @@ def jobInfo(request, pandaid=None, batchid=None, p2=None, p3=None, p4=None):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         if isEventService(job):
             return render_to_response('jobInfoES.html', data, RequestContext(request))
         else:
@@ -1708,7 +1714,8 @@ def userList(request):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('userList.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         resp = sumd
@@ -1848,7 +1855,8 @@ def userInfo(request, user=''):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('userInfo.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         resp = sumd
@@ -1952,7 +1960,8 @@ def siteList(request):
         if 'cloud' in requestParams: data['mcpsites'] = mcpsites[requestParams['cloud']]
         #data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('siteList.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         resp = sites
@@ -2040,7 +2049,8 @@ def siteInfo(request, site=''):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('siteInfo.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         resp = []
@@ -2266,7 +2276,8 @@ def wnInfo(request,site,wnname='all'):
             'errthreshold' : errthreshold,
         }
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('wnInfo.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         resp = []
@@ -2625,7 +2636,8 @@ def dashboard(request, view='production'):
             'hoursSinceUpdate' : hoursSinceUpdate,
         }
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         response = render_to_response('dashboard.html', data, RequestContext(request))
         patch_response_headers(response, cache_timeout=request.session['max_age_minutes']*60)
         return response
@@ -2689,7 +2701,8 @@ def dashTasks(request, hours, view='production'):
             'display_limit' : display_limit,
         }
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('dashboard.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         resp = []
@@ -2788,7 +2801,8 @@ def taskList(request):
             'flowstruct' : flowstruct,
         }
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         if 'eventservice' in requestParams:
             return render_to_response('taskListES.html', data, RequestContext(request))
         else:
@@ -3015,7 +3029,8 @@ def taskInfo(request, jeditaskid=0):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         if eventservice:
             return render_to_response('taskInfoES.html', data, RequestContext(request))       
         else:
@@ -3476,7 +3491,8 @@ def errorSummary(request):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         response = render_to_response('errorSummary.html', data, RequestContext(request))
         patch_response_headers(response, cache_timeout=request.session['max_age_minutes']*60)
         return response
@@ -3598,7 +3614,8 @@ def incidentList(request):
             'ninc' : len(incidents),
         }
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('incidents.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         resp = incidents
@@ -3722,7 +3739,8 @@ def pandaLogger(request):
             'getrecs' : getrecs,
         }
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('pandaLogger.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         resp = incidents
@@ -3799,7 +3817,8 @@ def workingGroups(request):
             'errthreshold' : errthreshold,
         }
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('workingGroups.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         resp = []
@@ -3867,7 +3886,8 @@ def datasetInfo(request):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('datasetInfo.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         return  HttpResponse(json.dumps(dsrec), mimetype='text/html')
@@ -3894,7 +3914,8 @@ def datasetList(request):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('datasetList.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         return  HttpResponse(json.dumps(dsrec), mimetype='text/html')
@@ -3973,7 +3994,8 @@ def fileInfo(request):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('fileInfo.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         return  HttpResponse(json.dumps(dsrec), mimetype='text/html')
@@ -4023,7 +4045,8 @@ def fileList(request):
         }
         data.update(getContextVariables(request))
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('fileList.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         return  HttpResponse(json.dumps(files), mimetype='text/html')
@@ -4049,7 +4072,8 @@ def workQueues(request):
             'xurl' : extensibleURL(request),
         }
         ##self monitor
-        endSelfMonitor(request)
+        if "SELF_MONITOR" in os.environ:
+            endSelfMonitor(request)
         return render_to_response('workQueues.html', data, RequestContext(request))
     elif request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
         return  HttpResponse(json.dumps(queues), mimetype='text/html')

@@ -11,6 +11,10 @@ defaultDatabase = {
 # Make this unique, and don't share it with anybody.
 MY_SECRET_KEY = 'FIXME'
 
+# Set this variable to any value to disable self-monitoring
+# (and require no write privileges for DB tables).
+#NO_SELF_MONITOR = 'yes'
+
 FILEBROWSER_DIRECTORY = "filebrowser"
 RUCIO_ACCOUNT = "atlpan"
 X509_USER_PROXY = "FIXME"

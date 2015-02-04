@@ -1,5 +1,6 @@
 
 from os.path import dirname, join
+from os import environ as os_environ
 import sys
 
 import core
@@ -33,6 +34,14 @@ for name in inherit_vars:
 
 #from local import defaultDatabase, MY_SECRET_KEY
 from local import dbaccess, MY_SECRET_KEY, LOG_ROOT
+
+# Self monitoring is to be disabled upon user request.
+try:
+    from local import NO_SELF_MONITOR
+    if "SELF_MONITOR" in os_environ:
+        del os_environ["SELF_MONITOR"]
+except ImportError:
+    os_environ["SELF_MONITOR"] = "YesPlease"
 
 ### VIRTUALENV
 #VIRTUALENV_PATH = '/data/virtualenv/django1.6.1__python2.6.6'
