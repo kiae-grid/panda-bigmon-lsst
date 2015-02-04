@@ -2315,6 +2315,8 @@ def dashSummary(request, hours, limit=999999, view='all', cloudview='region', no
         else:
             cloud = rec['cloud']
         site = rec['computingsite']
+        if not site:
+            continue
         if view.find('test') < 0:
             if view != 'analysis' and site.startswith('ANALY'): continue
             if view == 'analysis' and not site.startswith('ANALY'): continue
