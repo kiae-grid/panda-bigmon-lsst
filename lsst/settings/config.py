@@ -43,6 +43,15 @@ try:
 except ImportError:
     os_environ["SELF_MONITOR"] = "YesPlease"
 
+# We may want to use FS-backed sessions instead of
+# DB-backed ones.
+try:
+    from local import SESSION_STORE_DIR
+    SESSION_ENGINE = "django.contrib.sessions.backends.file"
+    SESSION_FILE_PATH = SESSION_STORE_DIR
+except ImportError:
+    pass
+
 ### VIRTUALENV
 #VIRTUALENV_PATH = '/data/virtualenv/django1.6.1__python2.6.6'
 #VIRTUALENV_PATH = '/data/virtualenv/django1.6.1__python2.6.6__lsst'

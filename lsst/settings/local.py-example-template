@@ -15,6 +15,13 @@ MY_SECRET_KEY = 'FIXME'
 # (and require no write privileges for DB tables).
 #NO_SELF_MONITOR = 'yes'
 
+# Set this variable to the location of the directory
+# that will be accessible by your Web server and session
+# cache will be kept in that directory rather than in
+# the database (also makes you to require no write
+# privileges for the database).
+#SESSION_STORE_DIR = '/some/path/protected/by/good/fs/permissions'
+
 FILEBROWSER_DIRECTORY = "filebrowser"
 RUCIO_ACCOUNT = "atlpan"
 X509_USER_PROXY = "FIXME"
