@@ -32,7 +32,7 @@ for name in inherit_vars:
 
 
 #from local import defaultDatabase, MY_SECRET_KEY
-from local import dbaccess, MY_SECRET_KEY
+from local import dbaccess, MY_SECRET_KEY, LOG_ROOT
 
 ### VIRTUALENV
 #VIRTUALENV_PATH = '/data/virtualenv/django1.6.1__python2.6.6'
@@ -105,7 +105,6 @@ STATIC_URL = URL_PATH_PREFIX + STATIC_URL_BASE
 
 #LOG_ROOT = '/data/bigpandamon_virtualhosts/lsst/logs'
 #LOG_ROOT = '/data/wenaus/logs'
-LOG_ROOT = '/data/wenaus/bigpandamon_virtualhosts/twrpm/logs'
 LOG_SIZE = 1000000000
 LOGGING = {
     'version': 1,
