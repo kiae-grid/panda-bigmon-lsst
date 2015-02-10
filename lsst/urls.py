@@ -7,6 +7,7 @@ from django.views.generic import TemplateView
 from django.conf import settings
 
 from lsst import views as lsstmon_views
+from core.pandajob.views import archivedJobList
 #import lsst.views as lsstmon_views
 import core.pandajob.views_support as core_lsstmon_support_views
 #import core.pandajob.views as core_lsstmon_views
@@ -62,7 +63,7 @@ urlpatterns = patterns('',
     url(r'^datasetInfo/$', lsstmon_views.datasetInfo, name='datasetInfo'),
     url(r'^datasetList/$', lsstmon_views.datasetList, name='datasetList'),
     url(r'^workQueues/$', lsstmon_views.workQueues, name='workQueues'),
-
+    url(r'^archived_jobs/$', archivedJobList, name='archivedJobList'),
 
     ### filebrowser
     url(r'^filebrowser/', include(filebrowser_urls()), name='filebrowser'),
