@@ -45,7 +45,8 @@ os.environ['DJANGO_SETTINGS_MODULE'] = DJANGO_SETTINGS_MODULE
 # pythonpath dirs
 PYTHONPATH = [
     join(dirname(__file__), pardir),
-    "/data/pandamon/maria/settings:/data/pandamon/maria/src/shibsso:/data/pandamon/maria/src/panda-bigmon-core:/data/pandamon/maria/src/panda-bigmon-lsst",
+  #  "/data/pandamon/maria/settings:/data/pandamon/maria/src/shibsso:/data/pandamon/maria/src/panda-bigmon-core:/data/pandamon/maria/src/panda-bigmon-lsst",
+    "/data/pandamon/maria/settings:/data/pandamon/maria/src/shibsso:/data/pandamon/maria/src/panda-bigmon-core:/data/pandamon/maria/src/panda-bigmon-atlas:/data/pandamon/maria/src/panda-bigmon-lsst:/data/pandamon/maria/src/pbm",
 ]
 
 # inject few paths to pythonpath
