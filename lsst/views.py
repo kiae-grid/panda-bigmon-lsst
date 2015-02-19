@@ -3515,7 +3515,7 @@ def errorSummary_archive(request):
     slice = day_site_errors_30m.objects.filter(date__in = [start_date, end_date])
     resp = []
     for job in slice:
-        resp.append({'date': job.date, 'computingsite': job.computingsite, 'base_mtime': job.base_mtime, 'errcode' : job.errcode, 
+        resp.append({'date': str(job.date), 'computingsite': job.computingsite, 'base_mtime': str(job.base_mtime), 'errcode' : job.errcode, 
                      'diag' : job.diag, 'count' : job.count})
     return  HttpResponse(json.dumps(resp), mimetype='text/html')
 
