@@ -15,6 +15,7 @@ from django.utils.cache import patch_cache_control, patch_response_headers
 from core.common.utils import getPrefix, getContextVariables, QuerySetChain
 from core.common.settings import STATIC_URL, FILTER_UI_ENV, defaultDatetimeFormat
 from core.pandajob.models import PandaJob, Jobsactive4, Jobsdefined4, Jobswaiting4, Jobsarchived4, Jobsarchived
+from core.pandajob.cassandra_models import day_site_errors_30m, day_index
 from core.resource.models import Schedconfig
 from core.common.models import Filestable4 
 from core.common.models import Datasets
@@ -40,6 +41,9 @@ from core.common.models import JediDatasetContents
 from core.common.models import JediWorkQueue
 from core.common.models import RequestStat
 from core.common.settings.config import ENV
+
+from cqlengine import columns
+from cqlengine.models import Model
 
 from settings.local import dbaccess
 import ErrorCodes
@@ -3503,6 +3507,16 @@ def errorSummary(request):
         for job in jobs:
             resp.append({ 'pandaid': job.pandaid, 'status': job.jobstatus, 'prodsourcelabel': job.prodsourcelabel, 'produserid' : job.produserid})
         return  HttpResponse(json.dumps(resp), mimetype='text/html')
+
+def errorSummary_archive(request):
+    start_date = date(2014, 07, 1)
+    end_date = date(2014, 07, 15)
+    slice = day_site_errors_30m.objects.filter(date__in = [start_date, end_date])
+    resp = []
+    for job in slice:
+        resp.append({'date': job.date, 'computingsite': job.computingsite, 'base_mtime': job.base_mtime, 'errcode' : job.errcode, 
+                     'diag' : job.diag, 'count' : job.count})
+    return  HttpResponse(json.dumps(resp), mimetype='text/html')
 
 def removeParam(urlquery, parname, mode='complete'):
     """Remove a parameter from current query"""
