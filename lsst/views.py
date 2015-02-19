@@ -3404,8 +3404,8 @@ def errorSummary(request):
     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-#     jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-#     jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
 
