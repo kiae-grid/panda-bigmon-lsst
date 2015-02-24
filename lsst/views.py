@@ -3445,20 +3445,13 @@ def errorSummary(request):
     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     ### start_date and end_date for Cassandra
-    day_site_errors = []
     if 'nosql' in requestParams:
-        from cassandra.auth import PlainTextAuthProvider
-        from cassandra.cluster import Cluster
-        ap = PlainTextAuthProvider(username='panda_m', password='akatsukizukuyo')
-        from cqlengine import connection
-        connection.setup(['nosql-one.zoo.computing.kiae.ru', 'nosql-two.zoo.computing.kiae.ru'], "bigpanda_archive", protocol_version=2, auth_provider=ap)
-        from cqlengine.management import sync_table
-        sync_table(day_site_errors_30m)
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
-        day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
-                                                                         datetime.fromtimestamp(mktime(end_struct))])
+        day_site_errors = day_site_errors.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
+                                                                     datetime.fromtimestamp(mktime(end_struct))])
+        errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors)
     else:
         jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
@@ -3468,7 +3461,7 @@ def errorSummary(request):
     tasknamedict = taskNameDict(jobs)
     
     ## Build the error summary.
-    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors)
+    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs)
 
     ## Build the state summary and add state info to site error summary
     #notime = True
