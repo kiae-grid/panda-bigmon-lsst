@@ -3303,22 +3303,22 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
         print "site", site
         errname, errnum = (item.errcode).split(":")
         errcode = item.errcode
+        error = filter(lambda err: err['name'] == errname, errorcodelist)
+        codename = error[0]['error']
         if site not in errsBySite:
             errsBySite[site] = {}
             errsBySite[site]['name'] = site
             errsBySite[site]['errors'] = {}
             errsBySite[site]['toterrors'] = 0
             errsBySite[site]['toterrjobs'] = item.count
-            error = filter(lambda err: err['name'] == errname, errorcodelist)
-            codename = error[0]['error']
-            if errnum == 0 or errnum == '0' or errnum == None: continue
-            if errcode not in errsBySite[site]['errors']:
-                errsBySite[site]['errors'][errcode] = {}
-                errsBySite[site]['errors'][errcode]['error'] = item.errcode
-                errsBySite[site]['errors'][errcode]['codename'] = codename
-                errsBySite[site]['errors'][errcode]['codeval'] = errnum
-                errsBySite[site]['errors'][errcode]['diag'] = item.diag
-                errsBySite[site]['errors'][errcode]['count'] = item.count
+            # if errnum == 0 or errnum == '0' or errnum == None: continue
+        if errcode not in errsBySite[site]['errors']:
+            errsBySite[site]['errors'][errcode] = {}
+            errsBySite[site]['errors'][errcode]['error'] = item.errcode
+            errsBySite[site]['errors'][errcode]['codename'] = codename
+            errsBySite[site]['errors'][errcode]['codeval'] = errnum
+            errsBySite[site]['errors'][errcode]['diag'] = item.diag
+            errsBySite[site]['errors'][errcode]['count'] = item.count
         errsBySite[site]['errors'][errcode]['count'] += item.count 
         errsBySite[site]['toterrjobs'] += item.count
     
