@@ -3294,10 +3294,12 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     sql_errors_time = sql_errors_end_time - sql_errors_start_time
     print "sql_errors_time", str(sql_errors_time)
     
+    if (len(day_site_errors) > 0):
+        errsBySite = {}
+    
     # NOSQL TIMINGS
     nosql_errors_start_time = time.time()
     # errsBySite from Cassandra archive
-    print "day_site_errors length", str(len(day_site_errors))
     for item in day_site_errors:
         site = item.computingsite
         errname, errnum = (item.errcode).split(":")
