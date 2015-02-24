@@ -3444,6 +3444,8 @@ def errorSummary(request):
     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    
+    day_site_errors = {}
     ### start_date and end_date for Cassandra
     if 'nosql' in requestParams:
         startdate, enddate = query['modificationtime__range']
@@ -3451,7 +3453,6 @@ def errorSummary(request):
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
         day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
                                                                      datetime.fromtimestamp(mktime(end_struct))])
-        errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors)
     else:
         jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
@@ -3461,7 +3462,7 @@ def errorSummary(request):
     tasknamedict = taskNameDict(jobs)
     
     ## Build the error summary.
-    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs)
+    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors)
 
     ## Build the state summary and add state info to site error summary
     #notime = True
