@@ -3447,6 +3447,13 @@ def errorSummary(request):
     ### start_date and end_date for Cassandra
     day_site_errors = []
     if 'nosql' in requestParams:
+        from cassandra.auth import PlainTextAuthProvider
+        from cassandra.cluster import Cluster
+        ap = PlainTextAuthProvider(username='panda_m', password='akatsukizukuyo')
+        from cqlengine import connection
+        connection.setup(['nosql-one.zoo.computing.kiae.ru', 'nosql-two.zoo.computing.kiae.ru'], "bigpanda_archive", protocol_version=2, auth_provider=ap)
+        from cqlengine.management import sync_table
+        sync_table(day_site_errors_30m)
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
