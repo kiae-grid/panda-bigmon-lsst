@@ -3300,6 +3300,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     # errsBySite from Cassandra archive
     for item in day_site_errors:
         site = item.computingsite
+        print "site", site
         errname, errnum = (item.errcode).split(":")
         if site not in errsBySite:
             errsBySite[site] = {}
