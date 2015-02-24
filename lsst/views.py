@@ -3211,6 +3211,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
                 if not v in sumd['specialhandling']: sumd['specialhandling'][v] = 0
                 sumd['specialhandling'][v] += 1
 
+      
         for err in errorcodelist:
             if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
                 errval = job[err['error']]
@@ -3319,8 +3320,8 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
         errsBySite[site]['errors'][errcode]['count'] += item.count 
         errsBySite[site]['toterrjobs'] += item.count
     
-    nosql_error_end_time = time.time()
-    nosql_error_time = nosql_error_end_time - nosql_errors_start_time
+    nosql_errors_end_time = time.time()
+    nosql_errors_time = nosql_errors_end_time - nosql_errors_start_time
     print "nosql_errors_time", str(nosql_errors_time)
                 
     ## reorganize as sorted lists
@@ -3452,7 +3453,7 @@ def errorSummary(request):
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
         day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
-                                                                     datetime.fromtimestamp(mktime(end_struct))])
+                                                                         datetime.fromtimestamp(mktime(end_struct))])
     else:
         jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
