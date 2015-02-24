@@ -3293,6 +3293,8 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     sql_errors_end_time = time.time()
     sql_errors_time = sql_errors_end_time - sql_errors_start_time
     print "sql_errors_time", str(sql_errors_time)
+    for k, v in errsBySite:
+        print v
     
     # NOSQL TIMINGS
     nosql_errors_start_time = time.time()
@@ -3323,6 +3325,9 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     nosql_errors_end_time = time.time()
     nosql_errors_time = nosql_errors_end_time - nosql_errors_start_time
     print "nosql_errors_time", str(nosql_errors_time)
+    for k, v in errsBySite:
+        print v
+    
                 
     ## reorganize as sorted lists
     errsByCountL = []
@@ -3441,10 +3446,10 @@ def errorSummary(request):
 
     jobs = []
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
-    jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-    jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-    jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-    jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+#     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+#     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+#     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+#     jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
     day_site_errors = {}
     ### start_date and end_date for Cassandra
