@@ -3300,7 +3300,6 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     print "day_site_errors length", str(len(day_site_errors))
     for item in day_site_errors:
         site = item.computingsite
-        print "site", site
         errname, errnum = (item.errcode).split(":")
         errcode = item.errcode
         error = filter(lambda err: err['name'] == errname, errorcodelist)
@@ -3451,13 +3450,16 @@ def errorSummary(request):
     
     day_site_errors = {}
     ### start_date and end_date for Cassandra
+    # Query: {'modificationtime__range': ['2003-09-29 03:08:10Z', '2015-02-24 19:08:10Z']}
+
     if 'nosql' in requestParams:
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
-        #day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
-        #                                                                 datetime.fromtimestamp(mktime(end_struct))])
-        day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime(2014, 6, 18), datetime(2014,10,1)])
+        sdate = datetime.fromtimestamp(mktime(start_struct)).date()
+        edate = datetime.fromtimestamp(mktime(end_struct)).date()
+        day_site_errors = day_site_errors_30m.objects.filter(date__in = [dsdate, edate])
+        # day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime(2014, 6, 18), datetime(2014,10,1)])
     else:
         jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
