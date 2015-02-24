@@ -3434,7 +3434,7 @@ def errorSummary(request):
     tasknamedict = taskNameDict(jobs)
     
     # Cassandra query for day_site_errors_30m datatable
-    start_date, end_date = query['modificationtime__in']
+    start_date, end_date = query['modificationtime__range']
     day_site_errors = day_site_errors_30m.objects.filter(date__in = [start_date, end_date])
 
     ## Build the error summary.
