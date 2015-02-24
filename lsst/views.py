@@ -299,10 +299,8 @@ def setupView(request, opmode='', hours=0, limit=-99, querytype='job'):
     
     ### start_date and end_date for Cassandra
     start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
-    cassandra_start_date = datetime.fromtimestamp(mktime(start_struct))
     end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
-    casssandra_end_date = datetime.fromtimestamp(mktime(end_struct))
-    query['date__in'] = [cassandra_start_date, cassandra_end_date]
+    query['date__in'] = [datetime.fromtimestamp(mktime(start_struct)), datetime.fromtimestamp(mktime(end_struct))]
     
     ### Add any extensions to the query determined from the URL
     for vo in [ 'atlas', 'lsst' ]:
