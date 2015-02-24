@@ -3302,6 +3302,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
         site = item.computingsite
         print "site", site
         errname, errnum = (item.errcode).split(":")
+        errcode = item.errcode
         if site not in errsBySite:
             errsBySite[site] = {}
             errsBySite[site]['name'] = site
@@ -3311,7 +3312,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
             error = filter(lambda err: err['name'] == errname, errorcodelist)
             codename = error[0]['error']
             if errnum == 0 or errnum == '0' or errnum == None: continue
-            if item.errcode not in errsBySite[site]['errors']:
+            if errcode not in errsBySite[site]['errors']:
                 errsBySite[site]['errors'][errcode] = {}
                 errsBySite[site]['errors'][errcode]['error'] = item.errcode
                 errsBySite[site]['errors'][errcode]['codename'] = codename
