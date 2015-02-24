@@ -3156,7 +3156,7 @@ def jobStateSummary(jobs):
         statecount[job['jobstatus']] += 1
     return statecount
 
-def errorSummaryDict(request,jobs, tasknamedict, testjobs):
+def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     """ take a job list and produce error summaries from it """
     errsByCount = {}
     errsBySite = {}
@@ -3283,6 +3283,28 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
         if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
         if taskid in errsByTask: errsByTask[taskid]['toterrjobs'] += 1
 
+    # errsBySite from Cassandra archive
+    for item in day_site_errors:
+        site = item.computingsite
+        errname, errnum = (item.errcode).split(":")
+        if site not in errsBySite:
+            errsBySite[site] = {}
+            errsBySite[site]['name'] = site
+            errsBySite[site]['errors'] = {}
+            errsBySite[site]['toterrors'] = 0
+            errsBySite[site]['toterrjobs'] = item.count
+            error = filter(lambda err: err['name'] == errname, errorcodelist)
+            codename = error['error']
+            if errval == 0 or errval == '0' or errval == None: continue
+            if item.errcode not in errsBySite[site]['errors']:
+                errsBySite[site]['errors'][errcode] = {}
+                errsBySite[site]['errors'][errcode]['error'] = item.errcode
+                errsBySite[site]['errors'][errcode]['codename'] = codename
+                errsBySite[site]['errors'][errcode]['codeval'] = errnum
+                errsBySite[site]['errors'][errcode]['diag'] = item.diag
+                errsBySite[site]['errors'][errcode]['count'] = item.count
+        errsBySite[site]['errors'][errcode]['count'] += item.count 
+        errsBySite[site]['toterrjobs'] += item.count
                 
     ## reorganize as sorted lists
     errsByCountL = []
@@ -3410,9 +3432,13 @@ def errorSummary(request):
     njobs = len(jobs)
 
     tasknamedict = taskNameDict(jobs)
+    
+    # Cassandra query for day_site_errors_30m datatable
+    start_date, end_date = query['modificationtime__in']
+    day_site_errors = day_site_errors_30m.objects.filter(date__in = [start_date, end_date])
 
     ## Build the error summary.
-    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs)
+    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors)
 
     ## Build the state summary and add state info to site error summary
     #notime = True
@@ -3509,15 +3535,39 @@ def errorSummary(request):
             resp.append({ 'pandaid': job.pandaid, 'status': job.jobstatus, 'prodsourcelabel': job.prodsourcelabel, 'produserid' : job.produserid})
         return  HttpResponse(json.dumps(resp), mimetype='text/html')
 
-def errorSummary_archive(request):
-    start_date = date(2014, 07, 1)
-    end_date = date(2014, 07, 15)
-    slice = day_site_errors_30m.objects.filter(date__in = [start_date, end_date])
-    resp = []
-    for job in slice:
-        resp.append({'date': str(job.date), 'computingsite': job.computingsite, 'base_mtime': str(job.base_mtime), 'errcode' : job.errcode, 
-                     'diag' : job.diag, 'count' : job.count})
-    return  HttpResponse(json.dumps(resp), mimetype='text/html')
+def errorSummary_archive(day_site_errors):
+#     start_date = date(2014, 07, 1)
+#     end_date = date(2014, 07, 15)
+#     slice = day_site_errors_30m.objects.filter(date__in = [start_date, end_date])
+    errsBySite = {}
+    for item in day_site_errors:
+        site = item.computingsite
+        errname, errnum = (item.errcode).split(":")
+        if site not in errsBySite:
+            errsBySite[site] = {}
+            errsBySite[site]['name'] = site
+            errsBySite[site]['errors'] = {}
+            errsBySite[site]['toterrors'] = 0
+            errsBySite[site]['toterrjobs'] = item.count
+            error = filter(lambda err: err['name'] == errname, errorcodelist)
+            codename = error['error']
+            if errval == 0 or errval == '0' or errval == None: continue
+            if item.errcode not in errsBySite[site]['errors']:
+                errsBySite[site]['errors'][errcode] = {}
+                errsBySite[site]['errors'][errcode]['error'] = item.errcode
+                errsBySite[site]['errors'][errcode]['codename'] = codename
+                errsBySite[site]['errors'][errcode]['codeval'] = errnum
+                errsBySite[site]['errors'][errcode]['diag'] = item.diag
+                errsBySite[site]['errors'][errcode]['count'] = item.count
+        errsBySite[site]['errors'][errcode]['count'] += item.count 
+        errsBySite[site]['toterrjobs'] += item.count
+    return errsBySite
+#     if request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
+#         resp = []
+#         for job in slice:
+#             resp.append({'date': str(job.date), 'computingsite': job.computingsite, 'base_mtime': str(job.base_mtime), 'errcode' : job.errcode, 
+#                          'diag' : job.diag, 'count' : job.count})
+#         return  HttpResponse(json.dumps(resp), mimetype='text/html')
 
 def removeParam(urlquery, parname, mode='complete'):
     """Remove a parameter from current query"""
