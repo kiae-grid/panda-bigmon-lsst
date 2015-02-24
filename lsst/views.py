@@ -3455,8 +3455,8 @@ def errorSummary(request):
     # Query: {'modificationtime__range': ['2003-09-29 03:08:10Z', '2015-02-24 19:08:10Z']}
 
     if 'nosql' in requestParams:
-        from cqlengine.named import NamedTable
-        day_site_errors_named = NamedTable("bigpanda_archive", "day_site_errors_30m")
+        #from cqlengine.named import NamedTable
+        #day_site_errors_named = NamedTable("bigpanda_archive", "day_site_errors_30m")
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
@@ -3466,9 +3466,10 @@ def errorSummary(request):
         dates = []
         for day_number in range(total_days):
             current_date = (sdate + timedelta(days = day_number))
-            dates.append(str(current_date))
-        # day_site_errors = day_site_errors_30m.objects.filter(date__in = dates)
-        day_site_errors = day_site_errors_named.objects().filter(date__in=dates)
+            dates.append(current_date)
+            # dates.append(str(current_date))
+        day_site_errors = day_site_errors_30m.objects.filter(date__in = dates)
+        #day_site_errors = day_site_errors_named.objects().filter(date__in=dates)
     else:
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
