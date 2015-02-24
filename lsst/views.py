@@ -295,6 +295,13 @@ def setupView(request, opmode='', hours=0, limit=-99, querytype='job'):
     if enddate == None:
         enddate = timezone.now().strftime(defaultDatetimeFormat)
     query = { 'modificationtime__range' : [startdate, enddate] }
+    
+    ### start_date and end_date for Cassandra
+    
+    cassandra_start_date = datetime.fromtimestamp(mktime(time.strptime((timezone.now() - timedelta(hours=LAST_N_HOURS_MAX)), "%Y-%m-%d %H:%M:%SZ")))
+    casssandra_end_date = datetime.fromtimestamp(mktime(time.strptime(timezone.now(), "%Y-%m-%d %H:%M:%SZ")))
+    query['date__in'] = [cassandra_start_date, cassandra_end_date]
+    
     ### Add any extensions to the query determined from the URL
     for vo in [ 'atlas', 'lsst' ]:
         if request.META['HTTP_HOST'].startswith(vo):
@@ -3434,9 +3441,9 @@ def errorSummary(request):
     tasknamedict = taskNameDict(jobs)
     
     # Cassandra query for day_site_errors_30m datatable
-    start_date, end_date = query['modificationtime__range']
-    startdate = datetime.utcfromtimestamp(time.mktime(time.strptime(start_date,'%Y-%m-%d'))).strftime(defaultDatetimeFormat)
-    enddate = datetime.utcfromtimestamp(time.mktime(time.strptime(end_date,'%Y-%m-%d'))).strftime(defaultDatetimeFormat)
+    start_date, end_date = query['date__in']
+#     startdate = datetime.utcfromtimestamp(time.mktime(time.strptime(start_date,'%Y-%m-%d %H:%M:%S'))).strftime(defaultDatetimeFormat)
+#     enddate = datetime.utcfromtimestamp(time.mktime(time.strptime(end_date,'%Y-%m-%d'))).strftime(defaultDatetimeFormat)
     day_site_errors = day_site_errors_30m.objects.filter(date__in = [startdate, enddate])
 
     ## Build the error summary.
