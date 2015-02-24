@@ -296,13 +296,7 @@ def setupView(request, opmode='', hours=0, limit=-99, querytype='job'):
     if enddate == None:
         enddate = timezone.now().strftime(defaultDatetimeFormat)
     query = { 'modificationtime__range' : [startdate, enddate] }
-    
-    ### start_date and end_date for Cassandra
-    if 'nosql' in requestParams:
-        start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
-        end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
-        query['date__in'] = [datetime.fromtimestamp(mktime(start_struct)), datetime.fromtimestamp(mktime(end_struct))]
-    
+  
     ### Add any extensions to the query determined from the URL
     for vo in [ 'atlas', 'lsst' ]:
         if request.META['HTTP_HOST'].startswith(vo):
@@ -3441,11 +3435,14 @@ def errorSummary(request):
 
     tasknamedict = taskNameDict(jobs)
     
-    # Cassandra query for day_site_errors_30m datatable
-    start_date, end_date = query['date__in']
-#     startdate = datetime.utcfromtimestamp(time.mktime(time.strptime(start_date,'%Y-%m-%d %H:%M:%S'))).strftime(defaultDatetimeFormat)
-#     enddate = datetime.utcfromtimestamp(time.mktime(time.strptime(end_date,'%Y-%m-%d'))).strftime(defaultDatetimeFormat)
-    day_site_errors = day_site_errors_30m.objects.filter(date__in = [startdate, enddate])
+    ### start_date and end_date for Cassandra
+    if 'nosql' in requestParams:
+        startdate, enddate = query['modificationtime__range']
+#         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
+#         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
+#         nosql_query = {'date__in' : [datetime.fromtimestamp(mktime(start_struct)), datetime.fromtimestamp(mktime(end_struct))] }
+        day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
+                                                                         datetime.fromtimestamp(mktime(end_struct))])
 
     ## Build the error summary.
     errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors)
