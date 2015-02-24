@@ -3169,6 +3169,9 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     errHist = {}
     flist = [ 'cloud', 'computingsite', 'produsername', 'taskid', 'jeditaskid', 'processingtype', 'prodsourcelabel', 'transformation', 'workinggroup', 'specialhandling', 'jobstatus' ]
 
+    ### TEST SQL AGGREGATION TIME
+    sql_errors_start_time = time.time()
+    
     for job in jobs:
         if not testjobs:
             if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
@@ -3224,29 +3227,29 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
                 if err['diag']:
                     errdiag = job[err['diag']]
                     
-                if errcode not in errsByCount:
-                    errsByCount[errcode] = {}
-                    errsByCount[errcode]['error'] = errcode
-                    errsByCount[errcode]['codename'] = err['error']
-                    errsByCount[errcode]['codeval'] = errnum
-                    errsByCount[errcode]['diag'] = errdiag
-                    errsByCount[errcode]['count'] = 0
-                errsByCount[errcode]['count'] += 1
-                
-                if user not in errsByUser:
-                    errsByUser[user] = {}
-                    errsByUser[user]['name'] = user
-                    errsByUser[user]['errors'] = {}
-                    errsByUser[user]['toterrors'] = 0
-                if errcode not in errsByUser[user]['errors']:
-                    errsByUser[user]['errors'][errcode] = {}
-                    errsByUser[user]['errors'][errcode]['error'] = errcode
-                    errsByUser[user]['errors'][errcode]['codename'] = err['error']
-                    errsByUser[user]['errors'][errcode]['codeval'] = errnum
-                    errsByUser[user]['errors'][errcode]['diag'] = errdiag
-                    errsByUser[user]['errors'][errcode]['count'] = 0
-                errsByUser[user]['errors'][errcode]['count'] += 1
-                errsByUser[user]['toterrors'] += 1
+#                 if errcode not in errsByCount:
+#                     errsByCount[errcode] = {}
+#                     errsByCount[errcode]['error'] = errcode
+#                     errsByCount[errcode]['codename'] = err['error']
+#                     errsByCount[errcode]['codeval'] = errnum
+#                     errsByCount[errcode]['diag'] = errdiag
+#                     errsByCount[errcode]['count'] = 0
+#                 errsByCount[errcode]['count'] += 1
+#                 
+#                 if user not in errsByUser:
+#                     errsByUser[user] = {}
+#                     errsByUser[user]['name'] = user
+#                     errsByUser[user]['errors'] = {}
+#                     errsByUser[user]['toterrors'] = 0
+#                 if errcode not in errsByUser[user]['errors']:
+#                     errsByUser[user]['errors'][errcode] = {}
+#                     errsByUser[user]['errors'][errcode]['error'] = errcode
+#                     errsByUser[user]['errors'][errcode]['codename'] = err['error']
+#                     errsByUser[user]['errors'][errcode]['codeval'] = errnum
+#                     errsByUser[user]['errors'][errcode]['diag'] = errdiag
+#                     errsByUser[user]['errors'][errcode]['count'] = 0
+#                 errsByUser[user]['errors'][errcode]['count'] += 1
+#                 errsByUser[user]['toterrors'] += 1
 
                 if site not in errsBySite:
                     errsBySite[site] = {}
@@ -3264,26 +3267,34 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
                 errsBySite[site]['errors'][errcode]['count'] += 1
                 errsBySite[site]['toterrors'] += 1
                 
-                if tasktype == 'jeditaskid' or taskid > 1000000 or 'produsername' in requestParams:
-                    if taskid not in errsByTask:
-                        errsByTask[taskid] = {}
-                        errsByTask[taskid]['name'] = taskid
-                        errsByTask[taskid]['longname'] = taskname
-                        errsByTask[taskid]['errors'] = {}
-                        errsByTask[taskid]['toterrors'] = 0
-                        errsByTask[taskid]['toterrjobs'] = 0
-                        errsByTask[taskid]['tasktype'] = tasktype
-                    if errcode not in errsByTask[taskid]['errors']:
-                        errsByTask[taskid]['errors'][errcode] = {}
-                        errsByTask[taskid]['errors'][errcode]['error'] = errcode
-                        errsByTask[taskid]['errors'][errcode]['codename'] = err['error']
-                        errsByTask[taskid]['errors'][errcode]['codeval'] = errnum
-                        errsByTask[taskid]['errors'][errcode]['diag'] = errdiag
-                        errsByTask[taskid]['errors'][errcode]['count'] = 0
-                    errsByTask[taskid]['errors'][errcode]['count'] += 1
-                    errsByTask[taskid]['toterrors'] += 1
+#                 if tasktype == 'jeditaskid' or taskid > 1000000 or 'produsername' in requestParams:
+#                     if taskid not in errsByTask:
+#                         errsByTask[taskid] = {}
+#                         errsByTask[taskid]['name'] = taskid
+#                         errsByTask[taskid]['longname'] = taskname
+#                         errsByTask[taskid]['errors'] = {}
+#                         errsByTask[taskid]['toterrors'] = 0
+#                         errsByTask[taskid]['toterrjobs'] = 0
+#                         errsByTask[taskid]['tasktype'] = tasktype
+#                     if errcode not in errsByTask[taskid]['errors']:
+#                         errsByTask[taskid]['errors'][errcode] = {}
+#                         errsByTask[taskid]['errors'][errcode]['error'] = errcode
+#                         errsByTask[taskid]['errors'][errcode]['codename'] = err['error']
+#                         errsByTask[taskid]['errors'][errcode]['codeval'] = errnum
+#                         errsByTask[taskid]['errors'][errcode]['diag'] = errdiag
+#                         errsByTask[taskid]['errors'][errcode]['count'] = 0
+#                     errsByTask[taskid]['errors'][errcode]['count'] += 1
+#                     errsByTask[taskid]['toterrors'] += 1
         if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
-        if taskid in errsByTask: errsByTask[taskid]['toterrjobs'] += 1
+#         if taskid in errsByTask: errsByTask[taskid]['toterrjobs'] += 1
+
+    ### TEST SQL AGGREGATION TIME
+    sql_errors_end_time = time.time()
+    sql_errors_time = sql_errors_end_time - sql_errors_start_time
+    print "sql_errors_time", str(sql_errors_time)
+    
+    # NOSQL TIMINGS
+    nosql_errors_start_time = time.time()
 
     # errsBySite from Cassandra archive
     for item in day_site_errors:
@@ -3307,6 +3318,10 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
                 errsBySite[site]['errors'][errcode]['count'] = item.count
         errsBySite[site]['errors'][errcode]['count'] += item.count 
         errsBySite[site]['toterrjobs'] += item.count
+    
+    nosql_error_end_time = time.time()
+    nosql_error_time = nosql_error_end_time - nosql_errors_start_time
+    print "nosql_errors_time", str(nosql_errors_time)
                 
     ## reorganize as sorted lists
     errsByCountL = []
@@ -3429,20 +3444,22 @@ def errorSummary(request):
     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-    jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
-    jobs = cleanJobList(jobs, mode='nodrop')
-    njobs = len(jobs)
-
-    tasknamedict = taskNameDict(jobs)
-    
     ### start_date and end_date for Cassandra
+    day_site_errors = []
     if 'nosql' in requestParams:
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
         day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
                                                                          datetime.fromtimestamp(mktime(end_struct))])
+    else:
+        jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    
+    jobs = cleanJobList(jobs, mode='nodrop')
+    njobs = len(jobs)
 
+    tasknamedict = taskNameDict(jobs)
+    
     ## Build the error summary.
     errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors)
 
