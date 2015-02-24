@@ -3435,7 +3435,9 @@ def errorSummary(request):
     
     # Cassandra query for day_site_errors_30m datatable
     start_date, end_date = query['modificationtime__range']
-    day_site_errors = day_site_errors_30m.objects.filter(date__in = [start_date, end_date])
+    startdate = datetime.utcfromtimestamp(time.mktime(time.strptime(start_date,'%Y-%m-%d'))).strftime(defaultDatetimeFormat)
+    enddate = datetime.utcfromtimestamp(time.mktime(time.strptime(end_date,'%Y-%m-%d'))).strftime(defaultDatetimeFormat)
+    day_site_errors = day_site_errors_30m.objects.filter(date__in = [startdate, enddate])
 
     ## Build the error summary.
     errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors)
