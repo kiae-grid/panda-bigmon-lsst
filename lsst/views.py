@@ -3449,7 +3449,7 @@ def errorSummary(request):
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
-        day_site_errors = day_site_errors.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
+        day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
                                                                      datetime.fromtimestamp(mktime(end_struct))])
         errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors)
     else:
