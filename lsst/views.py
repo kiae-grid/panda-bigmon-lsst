@@ -3454,8 +3454,9 @@ def errorSummary(request):
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
-        day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
-                                                                         datetime.fromtimestamp(mktime(end_struct))])
+        #day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
+        #                                                                 datetime.fromtimestamp(mktime(end_struct))])
+        day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime(2014, 6, 18), datetime(2014,10,1)])
     else:
         jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
