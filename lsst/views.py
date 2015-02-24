@@ -3452,20 +3452,6 @@ def errorSummary(request):
     ### start_date and end_date for Cassandra
     # Query: {'modificationtime__range': ['2003-09-29 03:08:10Z', '2015-02-24 19:08:10Z']}
 
-# import datetime as dt
-#  
-# start_date = dt.datetime(2014, 8,1)
-# end_date = dt.datetime(2014, 8,30)
-#  
-# total_days = (end_date - start_date).days + 1
-# dates = []
-# for day_number in range(total_days):
-#     current_date = (start_date + dt.timedelta(days = day_number)).date()
-#     print current_date
-#     dates.append(current_date)
-# day_site_errors = day_site_errors_30m.objects.filter(date__in = dates)
-
-
     if 'nosql' in requestParams:
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
@@ -3476,12 +3462,10 @@ def errorSummary(request):
         dates = []
         for day_number in range(total_days):
             current_date = (sdate + timedelta(days = day_number))
-            print current_date
             dates.append(current_date)
         day_site_errors = day_site_errors_30m.objects.filter(date__in = dates)
-        # day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime(2014, 6, 18), datetime(2014,10,1)])
     else:
-        jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
+        jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
