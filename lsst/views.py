@@ -3438,9 +3438,8 @@ def errorSummary(request):
     ### start_date and end_date for Cassandra
     if 'nosql' in requestParams:
         startdate, enddate = query['modificationtime__range']
-#         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
-#         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
-#         nosql_query = {'date__in' : [datetime.fromtimestamp(mktime(start_struct)), datetime.fromtimestamp(mktime(end_struct))] }
+        start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
+        end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
         day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
                                                                          datetime.fromtimestamp(mktime(end_struct))])
 
