@@ -182,7 +182,7 @@ def initRequest(request):
             pval = pval.replace('+',' ')
             pval = pval.replace('#','')
             ## is it int, if it's supposed to be?
-            if p.lower() in ( 'days', 'hours', 'limit', 'nosql','display_limit', 'taskid', 'jeditaskid', 'jobsetid', 'corecount', 'taskpriority', 'priority', 'attemptnr', 'statenotupdated', 'tasknotupdated', ):
+            if p.lower() in ( 'days', 'hours', 'limit', 'display_limit', 'taskid', 'jeditaskid', 'jobsetid', 'corecount', 'taskpriority', 'priority', 'attemptnr', 'statenotupdated', 'tasknotupdated', ):
                 try:
                     i = int(request.GET[p])
                 except:
@@ -3293,12 +3293,10 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     sql_errors_end_time = time.time()
     sql_errors_time = sql_errors_end_time - sql_errors_start_time
     print "sql_errors_time", str(sql_errors_time)
-    for k, v in errsBySite:
-        print v
     
     # NOSQL TIMINGS
     nosql_errors_start_time = time.time()
-
+    print "day_site_errors", type(day_site_errors)
     # errsBySite from Cassandra archive
     for item in day_site_errors:
         site = item.computingsite
