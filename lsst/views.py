@@ -3309,7 +3309,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
             errsBySite[site]['toterrors'] = 0
             errsBySite[site]['toterrjobs'] = item.count
             error = filter(lambda err: err['name'] == errname, errorcodelist)
-            codename = error['error']
+            codename = error[0]['error']
             if errval == 0 or errval == '0' or errval == None: continue
             if item.errcode not in errsBySite[site]['errors']:
                 errsBySite[site]['errors'][errcode] = {}
