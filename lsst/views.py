@@ -298,9 +298,10 @@ def setupView(request, opmode='', hours=0, limit=-99, querytype='job'):
     query = { 'modificationtime__range' : [startdate, enddate] }
     
     ### start_date and end_date for Cassandra
-    start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
-    end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
-    query['date__in'] = [datetime.fromtimestamp(mktime(start_struct)), datetime.fromtimestamp(mktime(end_struct))]
+    if 'nosql' in requestParams:
+        start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
+        end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
+        query['date__in'] = [datetime.fromtimestamp(mktime(start_struct)), datetime.fromtimestamp(mktime(end_struct))]
     
     ### Add any extensions to the query determined from the URL
     for vo in [ 'atlas', 'lsst' ]:
