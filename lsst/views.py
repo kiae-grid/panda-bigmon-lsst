@@ -3296,8 +3296,8 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     
     # NOSQL TIMINGS
     nosql_errors_start_time = time.time()
-    print "day_site_errors", type(day_site_errors)
     # errsBySite from Cassandra archive
+    print "day_site_errors length", str(len(day_site_errors))
     for item in day_site_errors:
         site = item.computingsite
         print "site", site
@@ -3324,8 +3324,6 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     nosql_errors_end_time = time.time()
     nosql_errors_time = nosql_errors_end_time - nosql_errors_start_time
     print "nosql_errors_time", str(nosql_errors_time)
-    for k, v in errsBySite:
-        print v
     
                 
     ## reorganize as sorted lists
@@ -3458,8 +3456,6 @@ def errorSummary(request):
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
         day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
                                                                          datetime.fromtimestamp(mktime(end_struct))])
-        for i in day_site_errors:
-            print "site_error = ", str(i)
     else:
         jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
