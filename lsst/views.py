@@ -3475,7 +3475,7 @@ def errorSummary(request):
         total_days = (edate - sdate).days + 1
         dates = []
         for day_number in range(total_days):
-            current_date = (sdate + datetime.timedelta(days = day_number)).date()
+            current_date = (sdate + timedelta(days = day_number)).date()
             print current_date
             dates.append(current_date)
         day_site_errors = day_site_errors_30m.objects.filter(date__in = dates)
