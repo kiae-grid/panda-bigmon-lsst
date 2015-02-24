@@ -3458,6 +3458,8 @@ def errorSummary(request):
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
         day_site_errors = day_site_errors_30m.objects.filter(date__in = [datetime.fromtimestamp(mktime(start_struct)), 
                                                                          datetime.fromtimestamp(mktime(end_struct))])
+        for i in day_site_errors:
+            print "site_error = ", str(i)
     else:
         jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
