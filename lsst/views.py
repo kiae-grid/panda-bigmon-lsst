@@ -3315,7 +3315,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
             errsBySite[site]['errors'][errcode]['error'] = errcode
             errsBySite[site]['errors'][errcode]['codename'] = codename
             errsBySite[site]['errors'][errcode]['codeval'] = errnum
-            errsBySite[site]['errors'][errcode]['diag'] = item
+            errsBySite[site]['errors'][errcode]['diag'] = diag
             errsBySite[site]['errors'][errcode]['count'] = 0
         errsBySite[site]['errors'][errcode]['count'] += count 
         errsBySite[site]['toterrors'] += count
