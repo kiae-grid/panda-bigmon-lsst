@@ -3447,26 +3447,21 @@ def errorSummary(request):
 #     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
 #     jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     
-    day_site_errors = {}
     ### start_date and end_date for Cassandra
     # Query: {'modificationtime__range': ['2003-09-29 03:08:10Z', '2015-02-24 19:08:10Z']}
 
+    day_site_errors = []
     if 'nosql' in requestParams:
-        # named Cassandra table (without creating objects)
-        # from cqlengine.named import NamedTable
-        # day_site_errors_named = NamedTable("bigpanda_archive", "day_site_errors_30m")
-        day_site_errors = []
         # construct string array with days between start_date and end_date
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
         sdate = date.fromtimestamp(mktime(start_struct))
         edate = date.fromtimestamp(mktime(end_struct))
-        total_days = (edate - sdate).days + 1
+        total_days = (edate - sdate).days
         dates = []
         for day_number in range(total_days):
             current_date = (sdate + timedelta(days = day_number))
-            # dates.append(str(current_date))
             dates.append(current_date)
         
         # query for each day in array
