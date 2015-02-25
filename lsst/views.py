@@ -3300,9 +3300,8 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     __nosql_errors_start_time = time.time()
     # errsBySite from Cassandra archive
     for item in day_site_errors:
-        site = item.computingsite
-        errname, errnum = (item.errcode).split(":")
-        errcode = item.errcode
+        site, errcode, diag, count = item
+        errname, errnum = errcode.split(":")
         codename = filter(lambda err: err['name'] == errname, errorcodelist)[0]['error']
         if site not in errsBySite:
             errsBySite[site] = {}
@@ -3313,14 +3312,14 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
         if errnum == 0 or errnum == '0' or errnum == None: continue
         if errcode not in errsBySite[site]['errors']:
             errsBySite[site]['errors'][errcode] = {}
-            errsBySite[site]['errors'][errcode]['error'] = item.errcode
+            errsBySite[site]['errors'][errcode]['error'] = errcode
             errsBySite[site]['errors'][errcode]['codename'] = codename
             errsBySite[site]['errors'][errcode]['codeval'] = errnum
-            errsBySite[site]['errors'][errcode]['diag'] = item.diag
+            errsBySite[site]['errors'][errcode]['diag'] = item
             errsBySite[site]['errors'][errcode]['count'] = 0
-        errsBySite[site]['errors'][errcode]['count'] += item.count 
-        errsBySite[site]['toterrors'] += item.count
-        errsBySite[site]['toterrjobs'] += item.count
+        errsBySite[site]['errors'][errcode]['count'] += count 
+        errsBySite[site]['toterrors'] += count
+        errsBySite[site]['toterrjobs'] += count
     
     __nosql_errors_time = time.time() - __nosql_errors_start_time
     print "nosql_errors_time", str(__nosql_errors_time)
@@ -3454,9 +3453,9 @@ def errorSummary(request):
 
     if 'nosql' in requestParams:
         # named Cassandra table (without creating objects)
-        from cqlengine.named import NamedTable
-        day_site_errors_named = NamedTable("bigpanda_archive", "day_site_errors_30m")
-        
+        # from cqlengine.named import NamedTable
+        # day_site_errors_named = NamedTable("bigpanda_archive", "day_site_errors_30m")
+        day_site_errors = []
         # construct string array with days between start_date and end_date
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
@@ -3467,12 +3466,14 @@ def errorSummary(request):
         dates = []
         for day_number in range(total_days):
             current_date = (sdate + timedelta(days = day_number))
-            dates.append(str(current_date))
+            # dates.append(str(current_date))
+            dates.append(current_date)
         
         # query for each day in array
         __start_day_site_errors = time.time()
         
-        day_site_errors = day_site_errors_named.objects().filter(date__in=dates)
+        # day_site_errors = day_site_errors_named.objects().filter(date__in=dates)
+        day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
         
         __timer_day_site_errors = time.time() - __start_day_site_errors
         print "__timer_day_site_errors = ", __timer_day_site_errors
