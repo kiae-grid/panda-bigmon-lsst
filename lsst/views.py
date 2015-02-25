@@ -3303,13 +3303,13 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
         site, errcode, diag, count = item
         errname, errnum = errcode.split(":")
         codename = filter(lambda err: err['name'] == errname, errorcodelist)[0]['error']
+        if errnum == 0 or errnum == '0' or errnum == None: continue
         if site not in errsBySite:
             errsBySite[site] = {}
             errsBySite[site]['name'] = site
             errsBySite[site]['errors'] = {}
             errsBySite[site]['toterrors'] = 0
             errsBySite[site]['toterrjobs'] = 0
-        if errnum == 0 or errnum == '0' or errnum == None: continue
         if errcode not in errsBySite[site]['errors']:
             errsBySite[site]['errors'][errcode] = {}
             errsBySite[site]['errors'][errcode]['error'] = errcode
