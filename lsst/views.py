@@ -3512,7 +3512,7 @@ def errorSummary(request):
                 if s in sitestates[sitename]: site[s] = sitestates[sitename][s]
             if 'pctfail' in sitestates[sitename]: site['pctfail'] = sitestates[sitename]['pctfail']
 
-#     taskname = ''
+    taskname = ''
 #     if not testjobs:
 #         ## Build the task state summary and add task state info to task error summary
 #         taskstatesummary = dashTaskSummary(request, hours, limit=limit, view=jobtype)
@@ -3534,10 +3534,10 @@ def errorSummary(request):
 #         if 'jeditaskid' in requestParams:
 #             taskname = getTaskName('jeditaskid',requestParams['jeditaskid'])
 # 
-#     if 'sortby' in requestParams:
-#         sortby = requestParams['sortby']
-#     else:
-#         sortby = 'alpha'
+    if 'sortby' in requestParams:
+        sortby = requestParams['sortby']
+    else:
+        sortby = 'alpha'
 
     flowstruct = buildGoogleFlowDiagram(jobs=jobs)
 
