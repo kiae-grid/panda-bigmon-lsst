@@ -3170,7 +3170,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     flist = [ 'cloud', 'computingsite', 'produsername', 'taskid', 'jeditaskid', 'processingtype', 'prodsourcelabel', 'transformation', 'workinggroup', 'specialhandling', 'jobstatus' ]
 
     ### TEST SQL AGGREGATION TIME
-    sql_errors_start_time = time.time()
+    __sql_errors_start_time = time.time()
     
     for job in jobs:
         if not testjobs:
@@ -3290,42 +3290,40 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
 #         if taskid in errsByTask: errsByTask[taskid]['toterrjobs'] += 1
 
     ### TEST SQL AGGREGATION TIME
-    sql_errors_end_time = time.time()
-    sql_errors_time = sql_errors_end_time - sql_errors_start_time
-    print "sql_errors_time", str(sql_errors_time)
+    __sql_errors_time = time.time() - __sql_errors_start_time
+    print "__sql_errors_time", str(__sql_errors_time)
     
     if (len(day_site_errors) > 0):
         errsBySite = {}
     
     # NOSQL TIMINGS
-    nosql_errors_start_time = time.time()
+    __nosql_errors_start_time = time.time()
     # errsBySite from Cassandra archive
     for item in day_site_errors:
         site = item.computingsite
         errname, errnum = (item.errcode).split(":")
         errcode = item.errcode
-        error = filter(lambda err: err['name'] == errname, errorcodelist)
-        codename = error[0]['error']
+        codename = filter(lambda err: err['name'] == errname, errorcodelist)[0]['error']
         if site not in errsBySite:
             errsBySite[site] = {}
             errsBySite[site]['name'] = site
             errsBySite[site]['errors'] = {}
             errsBySite[site]['toterrors'] = 0
-            errsBySite[site]['toterrjobs'] = item.count
-            # if errnum == 0 or errnum == '0' or errnum == None: continue
+            errsBySite[site]['toterrjobs'] = 0
+        if errnum == 0 or errnum == '0' or errnum == None: continue
         if errcode not in errsBySite[site]['errors']:
             errsBySite[site]['errors'][errcode] = {}
             errsBySite[site]['errors'][errcode]['error'] = item.errcode
             errsBySite[site]['errors'][errcode]['codename'] = codename
             errsBySite[site]['errors'][errcode]['codeval'] = errnum
             errsBySite[site]['errors'][errcode]['diag'] = item.diag
-            errsBySite[site]['errors'][errcode]['count'] = item.count
+            errsBySite[site]['errors'][errcode]['count'] = 0
         errsBySite[site]['errors'][errcode]['count'] += item.count 
+        errsBySite[site]['toterrors'] += item.count
         errsBySite[site]['toterrjobs'] += item.count
     
-    nosql_errors_end_time = time.time()
-    nosql_errors_time = nosql_errors_end_time - nosql_errors_start_time
-    print "nosql_errors_time", str(nosql_errors_time)
+    __nosql_errors_time = time.time() - __nosql_errors_start_time
+    print "nosql_errors_time", str(__nosql_errors_time)
     
                 
     ## reorganize as sorted lists
@@ -3473,12 +3471,16 @@ def errorSummary(request):
         
         # query for each day in array
         __start_day_site_errors = time.time()
+        
         day_site_errors = day_site_errors_named.objects().filter(date__in=dates)
+        
         __timer_day_site_errors = time.time() - __start_day_site_errors
         print "__timer_day_site_errors = ", __timer_day_site_errors
     else:
         __start_jobs = time.time()
+        
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+        
         __timer_jobs = time.time() - __start_jobs
         print "__timer_jobs = ", __timer_jobs
     
