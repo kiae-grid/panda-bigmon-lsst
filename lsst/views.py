@@ -3191,10 +3191,10 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
                 if taskid in tasknamedict:
                     taskname = tasknamedict[taskid]
                 tasktype = 'taskid'
-            tm = job['modificationtime']
-            tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
-            if not tm in errHist: errHist[tm] = 0
-            errHist[tm] += 1
+#             tm = job['modificationtime']
+#             tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
+#             if not tm in errHist: errHist[tm] = 0
+#             errHist[tm] += 1
     
             ## Overall summary
             for f in flist:
@@ -3215,6 +3215,12 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
           
             for err in errorcodelist:
                 if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
+                    
+                    tm = job['modificationtime']
+                    tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
+                    if not tm in errHist: errHist[tm] = 0
+                    errHist[tm] += 1
+
                     errval = job[err['error']]
                     ## error code of zero is not an error
                     if errval == 0 or errval == '0' or errval == None: continue
@@ -3294,8 +3300,9 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
         __sql_errors_time = time.time() - __sql_errors_start_time
         print "__sql_errors_time", str(__sql_errors_time)
     
-    elif (len(day_site_errors) > 0):
+    elif (len(day_site_errors) > 0): 
         errsBySite = {}
+    
         # NOSQL TIMINGS
         __nosql_errors_start_time = time.time()
         # errsBySite from Cassandra archive
