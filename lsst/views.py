@@ -3377,28 +3377,28 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
 #     if 'sortby' in requestParams and requestParams['sortby'] == 'count':
 #         errsByTaskL = sorted(errsByTaskL, key=lambda x:-x['toterrors'])
 # 
-#     suml = []
-#     for f in sumd:
-#         itemd = {}
-#         itemd['field'] = f
-#         iteml = []
-#         kys = sumd[f].keys()
-#         kys.sort()
-#         for ky in kys:
-#             iteml.append({ 'kname' : ky, 'kvalue' : sumd[f][ky] })
-#         itemd['list'] = iteml
-#         suml.append(itemd)
-#     suml = sorted(suml, key=lambda x:x['field'])
-# 
-#     if 'sortby' in requestParams and requestParams['sortby'] == 'count':
-#         for item in suml:
-#             item['list'] = sorted(item['list'], key=lambda x:-x['kvalue'])
-# 
-#     kys = errHist.keys()
-#     kys.sort()
-#     errHistL = []
-#     for k in kys:
-#         errHistL.append( [ k, errHist[k] ] )
+    suml = []
+    for f in sumd:
+        itemd = {}
+        itemd['field'] = f
+        iteml = []
+        kys = sumd[f].keys()
+        kys.sort()
+        for ky in kys:
+            iteml.append({ 'kname' : ky, 'kvalue' : sumd[f][ky] })
+        itemd['list'] = iteml
+        suml.append(itemd)
+    suml = sorted(suml, key=lambda x:x['field'])
+ 
+    if 'sortby' in requestParams and requestParams['sortby'] == 'count':
+        for item in suml:
+            item['list'] = sorted(item['list'], key=lambda x:-x['kvalue'])
+ 
+    kys = errHist.keys()
+    kys.sort()
+    errHistL = []
+    for k in kys:
+        errHistL.append( [ k, errHist[k] ] )
 
     return errsByCountL, errsBySiteL, errsByUserL, errsByTaskL, suml, errHistL
 
