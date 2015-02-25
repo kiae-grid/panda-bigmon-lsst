@@ -3334,24 +3334,24 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     errsByUserL = []
     errsByTaskL = []
     
-    kys = errsByCount.keys()
-    kys.sort()
-    for err in kys:
-        errsByCountL.append(errsByCount[err])
-    if 'sortby' in requestParams and requestParams['sortby'] == 'count':
-        errsByCountL = sorted(errsByCountL, key=lambda x:-x['count'])
-
-    kys = errsByUser.keys()
-    kys.sort()
-    for user in kys:
-        errsByUser[user]['errorlist'] = []
-        errkeys = errsByUser[user]['errors'].keys()
-        errkeys.sort()
-        for err in errkeys:
-            errsByUser[user]['errorlist'].append(errsByUser[user]['errors'][err])
-        errsByUserL.append(errsByUser[user])
-    if 'sortby' in requestParams and requestParams['sortby'] == 'count':
-        errsByUserL = sorted(errsByUserL, key=lambda x:-x['toterrors'])
+#     kys = errsByCount.keys()
+#     kys.sort()
+#     for err in kys:
+#         errsByCountL.append(errsByCount[err])
+#     if 'sortby' in requestParams and requestParams['sortby'] == 'count':
+#         errsByCountL = sorted(errsByCountL, key=lambda x:-x['count'])
+# 
+#     kys = errsByUser.keys()
+#     kys.sort()
+#     for user in kys:
+#         errsByUser[user]['errorlist'] = []
+#         errkeys = errsByUser[user]['errors'].keys()
+#         errkeys.sort()
+#         for err in errkeys:
+#             errsByUser[user]['errorlist'].append(errsByUser[user]['errors'][err])
+#         errsByUserL.append(errsByUser[user])
+#     if 'sortby' in requestParams and requestParams['sortby'] == 'count':
+#         errsByUserL = sorted(errsByUserL, key=lambda x:-x['toterrors'])
 
     kys = errsBySite.keys()
     kys.sort()
@@ -3365,40 +3365,40 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     if 'sortby' in requestParams and requestParams['sortby'] == 'count':
         errsBySiteL = sorted(errsBySiteL, key=lambda x:-x['toterrors'])
 
-    kys = errsByTask.keys()
-    kys.sort()
-    for taskid in kys:
-        errsByTask[taskid]['errorlist'] = []
-        errkeys = errsByTask[taskid]['errors'].keys()
-        errkeys.sort()
-        for err in errkeys:
-            errsByTask[taskid]['errorlist'].append(errsByTask[taskid]['errors'][err])
-        errsByTaskL.append(errsByTask[taskid])
-    if 'sortby' in requestParams and requestParams['sortby'] == 'count':
-        errsByTaskL = sorted(errsByTaskL, key=lambda x:-x['toterrors'])
-
-    suml = []
-    for f in sumd:
-        itemd = {}
-        itemd['field'] = f
-        iteml = []
-        kys = sumd[f].keys()
-        kys.sort()
-        for ky in kys:
-            iteml.append({ 'kname' : ky, 'kvalue' : sumd[f][ky] })
-        itemd['list'] = iteml
-        suml.append(itemd)
-    suml = sorted(suml, key=lambda x:x['field'])
-
-    if 'sortby' in requestParams and requestParams['sortby'] == 'count':
-        for item in suml:
-            item['list'] = sorted(item['list'], key=lambda x:-x['kvalue'])
-
-    kys = errHist.keys()
-    kys.sort()
-    errHistL = []
-    for k in kys:
-        errHistL.append( [ k, errHist[k] ] )
+#     kys = errsByTask.keys()
+#     kys.sort()
+#     for taskid in kys:
+#         errsByTask[taskid]['errorlist'] = []
+#         errkeys = errsByTask[taskid]['errors'].keys()
+#         errkeys.sort()
+#         for err in errkeys:
+#             errsByTask[taskid]['errorlist'].append(errsByTask[taskid]['errors'][err])
+#         errsByTaskL.append(errsByTask[taskid])
+#     if 'sortby' in requestParams and requestParams['sortby'] == 'count':
+#         errsByTaskL = sorted(errsByTaskL, key=lambda x:-x['toterrors'])
+# 
+#     suml = []
+#     for f in sumd:
+#         itemd = {}
+#         itemd['field'] = f
+#         iteml = []
+#         kys = sumd[f].keys()
+#         kys.sort()
+#         for ky in kys:
+#             iteml.append({ 'kname' : ky, 'kvalue' : sumd[f][ky] })
+#         itemd['list'] = iteml
+#         suml.append(itemd)
+#     suml = sorted(suml, key=lambda x:x['field'])
+# 
+#     if 'sortby' in requestParams and requestParams['sortby'] == 'count':
+#         for item in suml:
+#             item['list'] = sorted(item['list'], key=lambda x:-x['kvalue'])
+# 
+#     kys = errHist.keys()
+#     kys.sort()
+#     errHistL = []
+#     for k in kys:
+#         errHistL.append( [ k, errHist[k] ] )
 
     return errsByCountL, errsBySiteL, errsByUserL, errsByTaskL, suml, errHistL
 
@@ -3455,8 +3455,11 @@ def errorSummary(request):
     # Query: {'modificationtime__range': ['2003-09-29 03:08:10Z', '2015-02-24 19:08:10Z']}
 
     if 'nosql' in requestParams:
+        # named Cassandra table (without creating objects)
         from cqlengine.named import NamedTable
         day_site_errors_named = NamedTable("bigpanda_archive", "day_site_errors_30m")
+        
+        # construct string array with days between start_date and end_date
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
@@ -3466,12 +3469,18 @@ def errorSummary(request):
         dates = []
         for day_number in range(total_days):
             current_date = (sdate + timedelta(days = day_number))
-            #dates.append(current_date)
             dates.append(str(current_date))
-        # day_site_errors = day_site_errors_30m.objects.filter(date__in = dates)
+        
+        # query for each day in array
+        __start_day_site_errors = time.time()
         day_site_errors = day_site_errors_named.objects().filter(date__in=dates)
+        __timer_day_site_errors = time.time() - __start_day_site_errors
+        print "__timer_day_site_errors = ", __timer_day_site_errors
     else:
+        __start_jobs = time.time()
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+        __timer_jobs = time.time() - __start_jobs
+        print "__timer_jobs = ", __timer_jobs
     
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
@@ -3488,13 +3497,13 @@ def errorSummary(request):
     statesummary = dashSummary(request, hours, limit=limit, view=jobtype, cloudview='region', notime=notime)
     sitestates = {}
     savestates = [ 'finished', 'failed', 'cancelled', 'holding', ]
-    for cloud in statesummary:
-        for site in cloud['sites']:
-            sitename = cloud['sites'][site]['name']
-            sitestates[sitename] = {}
-            for s in savestates:
-                sitestates[sitename][s] = cloud['sites'][site]['states'][s]['count']
-            sitestates[sitename]['pctfail'] = cloud['sites'][site]['pctfail']
+#     for cloud in statesummary:
+#         for site in cloud['sites']:
+#             sitename = cloud['sites'][site]['name']
+#             sitestates[sitename] = {}
+#             for s in savestates:
+#                 sitestates[sitename][s] = cloud['sites'][site]['states'][s]['count']
+#             sitestates[sitename]['pctfail'] = cloud['sites'][site]['pctfail']
             
     for site in errsBySite:
         sitename = site['name']
@@ -3503,32 +3512,32 @@ def errorSummary(request):
                 if s in sitestates[sitename]: site[s] = sitestates[sitename][s]
             if 'pctfail' in sitestates[sitename]: site['pctfail'] = sitestates[sitename]['pctfail']
 
-    taskname = ''
-    if not testjobs:
-        ## Build the task state summary and add task state info to task error summary
-        taskstatesummary = dashTaskSummary(request, hours, limit=limit, view=jobtype)
-        taskstates = {}
-        for task in taskstatesummary:
-            taskid = task['taskid']
-            taskstates[taskid] = {}
-            for s in savestates:
-                taskstates[taskid][s] = task['states'][s]['count']
-            if 'pctfail' in task: taskstates[taskid]['pctfail'] = task['pctfail']
-
-        for task in errsByTask:
-            taskid = task['name']
-            if taskid in taskstates:
-                for s in savestates:
-                    if s in taskstates[taskid]: task[s] = taskstates[taskid][s]
-                if 'pctfail' in taskstates[taskid]: task['pctfail'] = taskstates[taskid]['pctfail']
-
-        if 'jeditaskid' in requestParams:
-            taskname = getTaskName('jeditaskid',requestParams['jeditaskid'])
-
-    if 'sortby' in requestParams:
-        sortby = requestParams['sortby']
-    else:
-        sortby = 'alpha'
+#     taskname = ''
+#     if not testjobs:
+#         ## Build the task state summary and add task state info to task error summary
+#         taskstatesummary = dashTaskSummary(request, hours, limit=limit, view=jobtype)
+#         taskstates = {}
+#         for task in taskstatesummary:
+#             taskid = task['taskid']
+#             taskstates[taskid] = {}
+#             for s in savestates:
+#                 taskstates[taskid][s] = task['states'][s]['count']
+#             if 'pctfail' in task: taskstates[taskid]['pctfail'] = task['pctfail']
+# 
+#         for task in errsByTask:
+#             taskid = task['name']
+#             if taskid in taskstates:
+#                 for s in savestates:
+#                     if s in taskstates[taskid]: task[s] = taskstates[taskid][s]
+#                 if 'pctfail' in taskstates[taskid]: task['pctfail'] = taskstates[taskid]['pctfail']
+# 
+#         if 'jeditaskid' in requestParams:
+#             taskname = getTaskName('jeditaskid',requestParams['jeditaskid'])
+# 
+#     if 'sortby' in requestParams:
+#         sortby = requestParams['sortby']
+#     else:
+#         sortby = 'alpha'
 
     flowstruct = buildGoogleFlowDiagram(jobs=jobs)
 
@@ -3575,40 +3584,6 @@ def errorSummary(request):
         for job in jobs:
             resp.append({ 'pandaid': job.pandaid, 'status': job.jobstatus, 'prodsourcelabel': job.prodsourcelabel, 'produserid' : job.produserid})
         return  HttpResponse(json.dumps(resp), mimetype='text/html')
-
-def errorSummary_archive(day_site_errors):
-#     start_date = date(2014, 07, 1)
-#     end_date = date(2014, 07, 15)
-#     slice = day_site_errors_30m.objects.filter(date__in = [start_date, end_date])
-    errsBySite = {}
-    for item in day_site_errors:
-        site = item.computingsite
-        errname, errnum = (item.errcode).split(":")
-        if site not in errsBySite:
-            errsBySite[site] = {}
-            errsBySite[site]['name'] = site
-            errsBySite[site]['errors'] = {}
-            errsBySite[site]['toterrors'] = 0
-            errsBySite[site]['toterrjobs'] = item.count
-            error = filter(lambda err: err['name'] == errname, errorcodelist)
-            codename = error['error']
-            if errval == 0 or errval == '0' or errval == None: continue
-            if item.errcode not in errsBySite[site]['errors']:
-                errsBySite[site]['errors'][errcode] = {}
-                errsBySite[site]['errors'][errcode]['error'] = item.errcode
-                errsBySite[site]['errors'][errcode]['codename'] = codename
-                errsBySite[site]['errors'][errcode]['codeval'] = errnum
-                errsBySite[site]['errors'][errcode]['diag'] = item.diag
-                errsBySite[site]['errors'][errcode]['count'] = item.count
-        errsBySite[site]['errors'][errcode]['count'] += item.count 
-        errsBySite[site]['toterrjobs'] += item.count
-    return errsBySite
-#     if request.META.get('CONTENT_TYPE', 'text/plain') == 'application/json':
-#         resp = []
-#         for job in slice:
-#             resp.append({'date': str(job.date), 'computingsite': job.computingsite, 'base_mtime': str(job.base_mtime), 'errcode' : job.errcode, 
-#                          'diag' : job.diag, 'count' : job.count})
-#         return  HttpResponse(json.dumps(resp), mimetype='text/html')
 
 def removeParam(urlquery, parname, mode='complete'):
     """Remove a parameter from current query"""
