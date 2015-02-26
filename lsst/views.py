@@ -3462,11 +3462,11 @@ def errorSummary(request):
     if 'nosql' in requestParams:
         # construct string array with days between start_date and end_date
         startdate, enddate = query['modificationtime__range']
-        start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
-        end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
+        start_struct = time.strptime(startdate, defaultDatetimeFormat)
+        end_struct = time.strptime(enddate, defaultDatetimeFormat)
         sdate = datetime.utcfromtimestamp(mktime(start_struct))
         edate = datetime.utcfromtimestamp(mktime(end_struct))
-        total_days = (edate - sdate).days + 1
+        total_days = (edate - sdate).days
         dates = []
         for day_number in range(total_days):
             current_date = (sdate + timedelta(days = day_number))
