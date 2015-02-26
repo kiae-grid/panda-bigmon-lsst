@@ -440,6 +440,7 @@ def setupView(request, opmode='', hours=0, limit=-99, querytype='job'):
     elif jobtype.find('test') >= 0:
         query['prodsourcelabel__icontains'] = jobtype
     print 'Query:', query
+    print 'dafaultDatetimeFormat:', defaultDatetimeFormat
     return query
 
 def cleanJobList(jobl, mode='drop'):
@@ -3463,9 +3464,9 @@ def errorSummary(request):
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, "%Y-%m-%d %H:%M:%SZ")
         end_struct = time.strptime(enddate, "%Y-%m-%d %H:%M:%SZ")
-        sdate = date.fromtimestamp(mktime(start_struct))
-        edate = date.fromtimestamp(mktime(end_struct))
-        total_days = (edate - sdate).days
+        sdate = datetime.utcfromtimestamp(mktime(start_struct))
+        edate = datetime.utcfromtimestamp(mktime(end_struct))
+        total_days = (edate - sdate).days + 1
         dates = []
         for day_number in range(total_days):
             current_date = (sdate + timedelta(days = day_number))
