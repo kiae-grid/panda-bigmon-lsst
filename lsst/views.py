@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.utils.cache import patch_cache_control, patch_response_headers
 
 from core.common.utils import getPrefix, getContextVariables, QuerySetChain
-from core.common.settings import STATIC_URL, FILTER_UI_ENV, defaultDatetimeFormat
+from core.common.settings import STATIC_URL, FILTER_UI_ENV, defaultDatetimeFormat, dbaccess
 from core.pandajob.models import PandaJob, Jobsactive4, Jobsdefined4, Jobswaiting4, Jobsarchived4, Jobsarchived
 from core.pandajob.cassandra_models import day_site_errors_30m, day_index
 from core.resource.models import Schedconfig
@@ -3180,6 +3180,15 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     errHist = {}
     flist = [ 'cloud', 'computingsite', 'produsername', 'taskid', 'jeditaskid', 'processingtype', 'prodsourcelabel', 'transformation', 'workinggroup', 'specialhandling', 'jobstatus' ]
 
+    sql_db = dbaccess.get('default').get('ENGINE')
+    nosqs_db = ''
+    for key, value in dbaccess.iteritems():
+        if (key != 'default'):
+            nosql_db = key
+    sql_nosql_test_logger.info("Test %s VS %s: \n", sql_db, nosql_db)
+    sql_nosql_test_logger.info("----------------------------------------------------------------------\n")
+    
+    
     ### TEST SQL AGGREGATION TIME
     __sql_errors_start_time = time.time()
     
@@ -3491,7 +3500,7 @@ def errorSummary(request):
         day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
         
         __timer_day_site_errors = time.time() - __start_day_site_errors
-        sql_nosql_test_logger.info("NoSQL query :\n %s\n", day_site_errors_30m.objects.filter(date__in=dates).export_as_string())
+        sql_nosql_test_logger.info("NoSQL query :\n %s\n", str(day_site_errors_30m.objects.filter(date__in=dates)))
         sql_nosql_test_logger.info("NoSQL query timings (ms): %s\n", str(__timer_day_site_errors))
         print "__timer_day_site_errors = ", __timer_day_site_errors
     else:
