@@ -93,7 +93,11 @@ errorcodelist = [
 _logger = logging.getLogger('bigpandamon')
 
 sql_nosql_test_logger = logging.getLogger('lsst_error_summary_log')
+# create formatter
+formatter = logging.Formatter("%(asctime)s\n: %(message)s")
+# add formatter to ch
 hdlr = logging.FileHandler('/home/mgri/git/panda-bigmon-lsst/lsst/lsst_error_summary_log.log')
+hdlr.setFormatter(formatter)
 sql_nosql_test_logger.addHandler(hdlr) 
 sql_nosql_test_logger.setLevel(logging.INFO)
 
@@ -3305,8 +3309,8 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
 
         ### TEST SQL AGGREGATION TIME
         __sql_errors_time = time.time() - __sql_errors_start_time
-        sql_nosql_test_logger.info("__sql_errors_time : %s", str(__sql_errors_time))
-        print "__sql_errors_time", str(__sql_errors_time)
+        sql_nosql_test_logger.info("SQL postprocessing time (ms) :  %s", str(__sql_errors_time))
+        print "SQL postprocessing time (ms) : ", str(__sql_errors_time)
     
     elif (len(day_site_errors) > 0): 
         errsBySite = {}
@@ -3337,7 +3341,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
             errsBySite[site]['toterrjobs'] += count
         
         __nosql_errors_time = time.time() - __nosql_errors_start_time
-        sql_nosql_test_logger.info("__nosql_errors_time : %s", str(__nosql_errors_time))
+        sql_nosql_test_logger.info("NoSQL postprocessing time (ms) : ", str(__nosql_errors_time))
         print "__nosql_errors_time", str(__nosql_errors_time)
     
                 
@@ -3487,6 +3491,8 @@ def errorSummary(request):
         day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
         
         __timer_day_site_errors = time.time() - __start_day_site_errors
+        sql_nosql_test_logger.info("NOSQL_QUERY_STRING : %s\n", str(day_site_errors_30m.objects.filter(date__in=dates).query))
+        sql_nosql_test_logger.info("NOSQL QUERY TIMINGS (ms): %s\n", str(__nosql_errors_time))
         print "__timer_day_site_errors = ", __timer_day_site_errors
     else:
         __start_jobs = time.time()
@@ -3494,6 +3500,8 @@ def errorSummary(request):
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         
         __timer_jobs = time.time() - __start_jobs
+        sql_nosql_test_logger.info("SQL QUERY STRING : %s\n",str(Jobsarchived4.objects.filter(**query).query))
+        sql_nosql_test_logger.info("SQL QUERY TIMING (ms) : %s\n", str(__nosql_errors_time))
         print "__timer_jobs = ", __timer_jobs
     
     jobs = cleanJobList(jobs, mode='nodrop')
