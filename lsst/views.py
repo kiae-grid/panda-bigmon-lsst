@@ -3491,7 +3491,7 @@ def errorSummary(request):
         day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
         
         __timer_day_site_errors = time.time() - __start_day_site_errors
-        sql_nosql_test_logger.info("NoSQL query :\n %s\n", str(day_site_errors_30m.objects.filter(date__in=dates).as_cql_query()))
+        sql_nosql_test_logger.info("NoSQL query :\n %s\n", day_site_errors_30m.objects.filter(date__in=dates).export_as_string())
         sql_nosql_test_logger.info("NoSQL query timings (ms): %s\n", str(__timer_day_site_errors))
         print "__timer_day_site_errors = ", __timer_day_site_errors
     else:
@@ -3500,7 +3500,7 @@ def errorSummary(request):
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         
         __timer_jobs = time.time() - __start_jobs
-        sql_nosql_test_logger.info("SQL query :\n %s\n",str(Jobsarchived4.objects.filter(**query).as_sql()))
+        sql_nosql_test_logger.info("SQL query :\n %s\n",str(Jobsarchived4.objects.filter(**query).query))
         sql_nosql_test_logger.info("SQL query timings (ms) : %s\n", str(__timer_jobs))
         print "__timer_jobs = ", __timer_jobs
     
