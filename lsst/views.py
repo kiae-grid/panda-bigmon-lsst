@@ -93,7 +93,7 @@ errorcodelist = [
 _logger = logging.getLogger('bigpandamon')
 
 sql_nosql_test_logger = logging.getLogger('lsst_error_summary_log')
-hdlr = logging.FileHandler('lsst_error_summary_log.log')
+hdlr = logging.FileHandler('/home/mgri/git/panda-bigmon-lsst/lsst/lsst_error_summary_log.log')
 sql_nosql_test_logger.addHandler(hdlr) 
 sql_nosql_test_logger.setLevel(logging.INFO)
 
