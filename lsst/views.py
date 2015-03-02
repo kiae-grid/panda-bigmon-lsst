@@ -3491,7 +3491,7 @@ def errorSummary(request):
         day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
         
         __timer_day_site_errors = time.time() - __start_day_site_errors
-        sql_nosql_test_logger.info("NOSQL_QUERY_STRING : %s\n", str(day_site_errors_30m.objects.filter(date__in=dates).query))
+        sql_nosql_test_logger.info("NOSQL_QUERY_STRING : %s\n", str(day_site_errors_30m.objects.filter(date__in=dates)))
         sql_nosql_test_logger.info("NOSQL QUERY TIMINGS (ms): %s\n", str(__nosql_errors_time))
         print "__timer_day_site_errors = ", __timer_day_site_errors
     else:
