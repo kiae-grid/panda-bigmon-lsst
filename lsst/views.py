@@ -91,6 +91,12 @@ errorcodelist = [
 
 
 _logger = logging.getLogger('bigpandamon')
+
+sql_nosql_test_logger = logging.getLogger('lsst_error_summary_log')
+hdlr = logging.FileHandler('lsst_error_summary_log.log')
+sql_nosql_test_logger.addHandler(hdlr) 
+sql_nosql_test_logger.setLevel(logging.INFO)
+
 viewParams = {}
 requestParams = {}
 
@@ -3299,6 +3305,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
 
         ### TEST SQL AGGREGATION TIME
         __sql_errors_time = time.time() - __sql_errors_start_time
+        sql_nosql_test_logger.info("__sql_errors_time : %s", str(__sql_errors_time))
         print "__sql_errors_time", str(__sql_errors_time)
     
     elif (len(day_site_errors) > 0): 
@@ -3330,6 +3337,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
             errsBySite[site]['toterrjobs'] += count
         
         __nosql_errors_time = time.time() - __nosql_errors_start_time
+        sql_nosql_test_logger.info("__nosql_errors_time : %s", str(__nosql_errors_time))
         print "__nosql_errors_time", str(__nosql_errors_time)
     
                 
