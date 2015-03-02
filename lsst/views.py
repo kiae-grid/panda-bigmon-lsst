@@ -3180,15 +3180,6 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
     errHist = {}
     flist = [ 'cloud', 'computingsite', 'produsername', 'taskid', 'jeditaskid', 'processingtype', 'prodsourcelabel', 'transformation', 'workinggroup', 'specialhandling', 'jobstatus' ]
 
-    sql_db = dbaccess.get('default').get('ENGINE')
-    nosqs_db = ''
-    for key, value in dbaccess.iteritems():
-        if (key != 'default'):
-            nosql_db = key
-    sql_nosql_test_logger.info("Test %s VS %s: \n ----------------------------------------------------------------------\n", sql_db, nosql_db)
-    sql_nosql_test_logger.info("URL: %s \n", request.META['QUERY_STRING'])
-    
-    
     ### TEST SQL AGGREGATION TIME
     __sql_errors_start_time = time.time()
     
@@ -3441,6 +3432,13 @@ def getTaskName(tasktype,taskid):
 def errorSummary(request):
     valid, response = initRequest(request)
     if not valid: return response
+    
+    sql_db = dbaccess.get('default').get('ENGINE')
+    nosqs_db = ''
+    for key, value in dbaccess.iteritems():
+        if (key != 'default'):
+            nosql_db = key
+    sql_nosql_test_logger.info("Test %s VS %s: \n------------------------------------------------------\nURL : %s", sql_db, nosql_db, request.META['QUERY_STRING'])
 
     testjobs = False
     if 'prodsourcelabel' in requestParams and requestParams['prodsourcelabel'].lower().find('test') >= 0:
