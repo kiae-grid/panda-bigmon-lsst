@@ -94,10 +94,10 @@ _logger = logging.getLogger('bigpandamon')
 
 sql_nosql_test_logger = logging.getLogger('lsst_error_summary_log')
 # create formatter
-formatter = logging.Formatter("%(asctime)s\n%(message)s")
+#formatter = logging.Formatter("%(asctime)s\n%(message)s")
 # add formatter to ch
 hdlr = logging.FileHandler('/home/mgri/git/panda-bigmon-lsst/lsst/lsst_error_summary_log.log')
-hdlr.setFormatter(formatter)
+#hdlr.setFormatter(formatter)
 sql_nosql_test_logger.addHandler(hdlr) 
 sql_nosql_test_logger.setLevel(logging.INFO)
 
@@ -3341,7 +3341,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
             errsBySite[site]['toterrjobs'] += count
         
         __nosql_errors_time = time.time() - __nosql_errors_start_time
-        sql_nosql_test_logger.info("NoSQL postprocessing time (ms) : ", str(__nosql_errors_time))
+        sql_nosql_test_logger.info("NoSQL postprocessing time (ms) : %s", str(__nosql_errors_time))
         print "__nosql_errors_time", str(__nosql_errors_time)
     
                 
@@ -3438,7 +3438,7 @@ def errorSummary(request):
     for key, value in dbaccess.iteritems():
         if (key != 'default'):
             nosql_db = key
-    sql_nosql_test_logger.info("Test %s VS %s: \n------------------------------------------------------\nURL : %s", sql_db, nosql_db, request.META['QUERY_STRING'])
+    sql_nosql_test_logger.info("\n%s --- Test %s VS %s: \n------------------------------------------------------\nURL : %s", datetime.now().__str__(), sql_db, nosql_db, request.META['QUERY_STRING'])
 
     testjobs = False
     if 'prodsourcelabel' in requestParams and requestParams['prodsourcelabel'].lower().find('test') >= 0:
