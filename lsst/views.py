@@ -3492,7 +3492,7 @@ def errorSummary(request):
         
         __timer_day_site_errors = time.time() - __start_day_site_errors
         sql_nosql_test_logger.info("NOSQL_QUERY_STRING : %s\n", str(day_site_errors_30m.objects.filter(date__in=dates)))
-        sql_nosql_test_logger.info("NOSQL QUERY TIMINGS (ms): %s\n", str(__nosql_errors_time))
+        sql_nosql_test_logger.info("NOSQL QUERY TIMINGS (ms): %s\n", str(__timer_day_site_errors))
         print "__timer_day_site_errors = ", __timer_day_site_errors
     else:
         __start_jobs = time.time()
@@ -3501,7 +3501,7 @@ def errorSummary(request):
         
         __timer_jobs = time.time() - __start_jobs
         sql_nosql_test_logger.info("SQL QUERY STRING : %s\n",str(Jobsarchived4.objects.filter(**query).query))
-        sql_nosql_test_logger.info("SQL QUERY TIMING (ms) : %s\n", str(__nosql_errors_time))
+        sql_nosql_test_logger.info("SQL QUERY TIMING (ms) : %s\n", str(__timer_jobs))
         print "__timer_jobs = ", __timer_jobs
     
     jobs = cleanJobList(jobs, mode='nodrop')
