@@ -3505,32 +3505,38 @@ def errorSummary(request):
             day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
             
             __timer_day_site_errors = time.time() - start_time
-            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\n", str(__timer_day_site_errors))
-            __errorSummaryPerformance.info("Number of records: %s", len(day_site_errors))
+            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(__timer_day_site_errors), len(day_site_errors))
         elif nosql_request_table == 'jobs':
             # query for each day in array
             __start = time.time()
             
             new_list = []
+            jobs_list = []
             for day in dates:
-                jobs_list = list(nosql_jobs.objects.filter(date__eq=day).values_list(*values))
-                new_item = {}
-                for item in jobs_list:
-                    for i in range(0, len(values)-1):
-                        new_item[values[i]] = item[i]
-                new_list.append(new_item)
-                jobs.extend(new_list)
-            
+                jobs_list.append(list(nosql_jobs.objects.filter(date__eq=day).values_list(*values)))
+                
             __timer_jobs = time.time() - __start
-            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\n", str(__timer_jobs))
-            __errorSummaryPerformance.info("Number of records: %s", len(new_list))
+            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(__timer_jobs), len(new_list))                
+            
+            __start = time.time()
+            
+            for item in jobs_list:
+                new_item = {}
+                for i in range(0, len(values)-1):
+                    new_item[values[i]] = item[i]
+                new_list.append(new_item)
+            jobs.extend(new_list)
+            
+            __timer_dict = time.time() - __start
+            __errorSummaryPerformance.info("Jobs List -> Jobs Dictionary timings: %s", str(__timer_dict))
+
     else:
         __start = time.time()
         
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         
         __timer_jobs = time.time() - __start
-        __errorSummaryPerformance.info("SQL query timings (ms) : %s\n", str(__timer_jobs))
+        __errorSummaryPerformance.info("SQL query timings (ms) : %s\nNumber of records: %s", str(__timer_jobs), len(jobs))
         __errorSummaryPerformance.info("Number of records: %s", len(jobs))
     
     jobs = cleanJobList(jobs, mode='nodrop')
