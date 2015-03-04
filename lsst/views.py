@@ -3512,10 +3512,13 @@ def errorSummary(request):
             
             for day in dates:
                 jobs_list = list(nosql_jobs.objects.filter(date__eq=day).values_list(*values))
+                new_list = []
+                new_item = {}
                 for item in jobs_list:
                     for i in range(0, len(values)-1):
-                        item[i] = {values[i] : item[i]}
-                jobs.extend(jobs_list)
+                        new_item[values[i]] = item[i]
+                new_list.append(new_item)
+                jobs.extend(new_list)
             
             __timer_jobs = time.time() - __start
             __errorSummaryPerformance.info("NoSQL query timings (ms): %s\n", str(__timer_jobs))
