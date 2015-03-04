@@ -3506,13 +3506,14 @@ def errorSummary(request):
             
             __timer_day_site_errors = time.time() - start_time
             __errorSummaryPerformance.info("NoSQL query timings (ms): %s\n", str(__timer_day_site_errors))
+            __errorSummaryPerformance.info("Number of records: %s", len(day_site_errors))
         elif nosql_request_table == 'jobs':
             # query for each day in array
             __start = time.time()
             
+            new_list = []
             for day in dates:
                 jobs_list = list(nosql_jobs.objects.filter(date__eq=day).values_list(*values))
-                new_list = []
                 new_item = {}
                 for item in jobs_list:
                     for i in range(0, len(values)-1):
@@ -3522,6 +3523,7 @@ def errorSummary(request):
             
             __timer_jobs = time.time() - __start
             __errorSummaryPerformance.info("NoSQL query timings (ms): %s\n", str(__timer_jobs))
+            __errorSummaryPerformance.info("Number of records: %s", len(new_list))
     else:
         __start = time.time()
         
@@ -3529,6 +3531,7 @@ def errorSummary(request):
         
         __timer_jobs = time.time() - __start
         __errorSummaryPerformance.info("SQL query timings (ms) : %s\n", str(__timer_jobs))
+        __errorSummaryPerformance.info("Number of records: %s", len(jobs))
     
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
