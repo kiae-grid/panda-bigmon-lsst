@@ -18,6 +18,7 @@ from core.common.utils import getPrefix, getContextVariables, QuerySetChain
 from core.common.settings import STATIC_URL, FILTER_UI_ENV, defaultDatetimeFormat, dbaccess
 from core.pandajob.models import PandaJob, Jobsactive4, Jobsdefined4, Jobswaiting4, Jobsarchived4, Jobsarchived
 from core.pandajob.cassandra_models import day_site_errors_30m, day_index
+from core.pandajob.cassandra_models import jobs as nosql_jobs
 from core.resource.models import Schedconfig
 from core.common.models import Filestable4 
 from core.common.models import Datasets
@@ -3509,7 +3510,7 @@ def errorSummary(request):
             # query for each day in array
             __start = time.time()
             
-            jobs_list = list(jobs.objects.filter(date__in=dates).values_list(*values))
+            jobs_list = list(nosql_jobs.objects.filter(date__in=dates).values_list(*values))
             for item in jobs_list:
                 for i in range(0, len(values)-1):
                     item[i] = {values[i] : item[i]}
