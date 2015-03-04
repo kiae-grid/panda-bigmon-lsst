@@ -3509,7 +3509,7 @@ def errorSummary(request):
             # query for each day in array
             __start = time.time()
             
-            jobs_list = list(jobs.objects.filter(date__in=dates).values_list(values))
+            jobs_list = list(jobs.objects.filter(date__in=dates).values_list(*values))
             for item in jobs_list:
                 for i in range(0, len(values)-1):
                     item[i] = {values[i] : item[i]}
