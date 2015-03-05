@@ -3318,8 +3318,28 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
         # NOSQL TIMINGS
         __nosql_errors_start_time = time.time()
         # errsBySite from Cassandra archive
-        for item in day_site_errors:
-            site, errcode, diag, count = item
+#         for item in day_site_errors:
+#             site, errcode, diag, count = item
+#             errname, errnum = errcode.split(":")
+#             codename = filter(lambda err: err['name'] == errname, errorcodelist)[0]['error']
+#             if errnum == 0 or errnum == '0' or errnum == None: continue
+#             if site not in errsBySite:
+#                 errsBySite[site] = {}
+#                 errsBySite[site]['name'] = site
+#                 errsBySite[site]['errors'] = {}
+#                 errsBySite[site]['toterrors'] = 0
+#                 errsBySite[site]['toterrjobs'] = 0
+#             if errcode not in errsBySite[site]['errors']:
+#                 errsBySite[site]['errors'][errcode] = {}
+#                 errsBySite[site]['errors'][errcode]['error'] = errcode
+#                 errsBySite[site]['errors'][errcode]['codename'] = codename
+#                 errsBySite[site]['errors'][errcode]['codeval'] = errnum
+#                 errsBySite[site]['errors'][errcode]['diag'] = diag
+#                 errsBySite[site]['errors'][errcode]['count'] = 0
+#             errsBySite[site]['errors'][errcode]['count'] += count 
+#             errsBySite[site]['toterrors'] += count
+#             errsBySite[site]['toterrjobs'] += count
+        for site, errcode, diag, pandaid in day_site_errors:
             errname, errnum = errcode.split(":")
             codename = filter(lambda err: err['name'] == errname, errorcodelist)[0]['error']
             if errnum == 0 or errnum == '0' or errnum == None: continue
@@ -3329,6 +3349,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
                 errsBySite[site]['errors'] = {}
                 errsBySite[site]['toterrors'] = 0
                 errsBySite[site]['toterrjobs'] = 0
+                errsBySite[site]['pandaids'] = []
             if errcode not in errsBySite[site]['errors']:
                 errsBySite[site]['errors'][errcode] = {}
                 errsBySite[site]['errors'][errcode]['error'] = errcode
@@ -3336,9 +3357,12 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors):
                 errsBySite[site]['errors'][errcode]['codeval'] = errnum
                 errsBySite[site]['errors'][errcode]['diag'] = diag
                 errsBySite[site]['errors'][errcode]['count'] = 0
-            errsBySite[site]['errors'][errcode]['count'] += count 
-            errsBySite[site]['toterrors'] += count
-            errsBySite[site]['toterrjobs'] += count
+            errsBySite[site]['errors'][errcode]['count'] += 1
+            errsBySite[site]['toterrors'] += 1 
+        
+        for key, value in errsBySite.iteritems():
+            jobs = list(set(value['pandaids']))
+            value['toterrjobs'] = len(jobs)
         
         __nosql_errors_time = time.time() - __nosql_errors_start_time
         __errorSummaryPerformance.info("NoSQL postprocessing time (ms) : %s", str(__nosql_errors_time))
@@ -3497,12 +3521,13 @@ def errorSummary(request):
             current_date = (sdate + timedelta(days = day_number))
             dates.append(current_date)
         
-        if nosql_request_table == 'day_site_error_30m':
+        if nosql_request_table == 'day_site_errors':
             # query for each day in array
             __start = time.time()
             
+            day_site_errors = list(day_site_errors.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             # day_site_errors = day_site_errors_named.objects().filter(date__in=dates)
-            day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
+            # day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
             
             __timer_day_site_errors = time.time() - start_time
             __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(__timer_day_site_errors), len(day_site_errors))
