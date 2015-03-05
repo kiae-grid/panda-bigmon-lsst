@@ -3184,7 +3184,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list)
     ### TEST SQL AGGREGATION TIME
     __sql_errors_start_time = time.time()
     
-    if len(day_site_errors) == 0:
+    if len(day_site_errors_list) == 0:
         for job in jobs:
             if not testjobs:
                 if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
@@ -3312,7 +3312,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list)
         __sql_errors_time = time.time() - __sql_errors_start_time
         __errorSummaryPerformance.info("SQL postprocessing time (ms) :  %s", str(__sql_errors_time))
     
-    elif (len(day_site_errors) > 0): 
+    elif (len(day_site_errors_list) > 0): 
         errsBySite = {}
     
         # NOSQL TIMINGS
