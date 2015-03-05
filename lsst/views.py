@@ -17,7 +17,7 @@ from django.utils.cache import patch_cache_control, patch_response_headers
 from core.common.utils import getPrefix, getContextVariables, QuerySetChain
 from core.common.settings import STATIC_URL, FILTER_UI_ENV, defaultDatetimeFormat, dbaccess
 from core.pandajob.models import PandaJob, Jobsactive4, Jobsdefined4, Jobswaiting4, Jobsarchived4, Jobsarchived
-from core.pandajob.cassandra_models import day_site_errors_30m, day_index
+from core.pandajob.cassandra_models import day_site_errors, day_index, day_errors_30m, day_site_errors_cnt_30m
 from core.pandajob.cassandra_models import jobs as nosql_jobs
 from core.resource.models import Schedconfig
 from core.common.models import Filestable4 
