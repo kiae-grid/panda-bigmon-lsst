@@ -3170,7 +3170,7 @@ def jobStateSummary(jobs):
         statecount[job['jobstatus']] += 1
     return statecount
 
-def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list):
+def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list, day_site_errors_cnt_30m_list):
     """ take a job list and produce error summaries from it """
     errsByCount = {}
     errsBySite = {}
