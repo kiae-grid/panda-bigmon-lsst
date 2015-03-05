@@ -3529,7 +3529,7 @@ def errorSummary(request):
             # day_site_errors = day_site_errors_named.objects().filter(date__in=dates)
             # day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
             
-            __timer_day_site_errors = time.time() - start_time
+            __timer_day_site_errors = time.time() - __start
             __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(__timer_day_site_errors), len(day_site_errors_list))
         elif nosql_request_table == 'jobs':
             # query for each day in array
