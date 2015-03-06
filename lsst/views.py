@@ -3545,8 +3545,8 @@ def errorSummary(request):
                     new_item = {}
                     for i in range(0, len(values)):
                         new_item[values[i]] = item[i]
-                    #new_list.extend(new_item)
-                    jobs.extend(new_item)
+                    new_list.append(new_item)
+            jobs.extend(new_list)
             
             __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(jobs))
     else:
