@@ -3351,17 +3351,17 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list,
                     errsBySite[site] = {}
                     errsBySite[site]['name'] = site
                     errsBySite[site]['errors'] = {}
-                    errsBySite[site]['toterrors'] = 0
-                    errsBySite[site]['toterrjobs'] = 0
+                    errsBySite[site]['toterrors'] = err_count
+                    errsBySite[site]['toterrjobs'] = job_count
                 if errcode not in errsBySite[site]['errors']:
                     errsBySite[site]['errors'][errcode] = {}
                     errsBySite[site]['errors'][errcode]['error'] = errcode
                     errsBySite[site]['errors'][errcode]['codename'] = codename
                     errsBySite[site]['errors'][errcode]['codeval'] = errnum
                     errsBySite[site]['errors'][errcode]['diag'] = diag
-                    errsBySite[site]['errors'][errcode]['count'] = 0
-            errsBySite[site]['errors'][errcode]['count'] += err_count
-            errsBySite[site]['toterrors'] += job_count
+                    errsBySite[site]['errors'][errcode]['count'] = err_count
+                errsBySite[site]['errors'][errcode]['count'] += err_count
+                errsBySite[site]['toterrors'] += job_count
         
                 
         __nosql_errors_time = time.time() - __start
