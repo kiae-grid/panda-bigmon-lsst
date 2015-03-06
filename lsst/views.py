@@ -3184,7 +3184,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list,
     ### TEST SQL AGGREGATION TIME
     __sql_errors_start_time = time.time()
     
-    if len(day_site_errors_list) == 0:
+    if ('nosql' not in requestParams) or (requestParams['nosql'] == 'jobs'):
         for job in jobs:
             if not testjobs:
                 if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
@@ -3312,87 +3312,61 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list,
         __sql_errors_time = time.time() - __sql_errors_start_time
         __errorSummaryPerformance.info("SQL postprocessing time (ms) :  %s", str(__sql_errors_time))
     
-    elif (len(day_site_errors_list) > 0): 
+    elif 'nosql' in requestParams:
         errsBySite = {}
-    
-        # NOSQL TIMINGS
-        __nosql_errors_start_time = time.time()
-        # errsBySite from Cassandra archive
-#         for item in day_site_errors:
-#             site, errcode, diag, count = item
-#             errname, errnum = errcode.split(":")
-#             codename = filter(lambda err: err['name'] == errname, errorcodelist)[0]['error']
-#             if errnum == 0 or errnum == '0' or errnum == None: continue
-#             if site not in errsBySite:
-#                 errsBySite[site] = {}
-#                 errsBySite[site]['name'] = site
-#                 errsBySite[site]['errors'] = {}
-#                 errsBySite[site]['toterrors'] = 0
-#                 errsBySite[site]['toterrjobs'] = 0
-#             if errcode not in errsBySite[site]['errors']:
-#                 errsBySite[site]['errors'][errcode] = {}
-#                 errsBySite[site]['errors'][errcode]['error'] = errcode
-#                 errsBySite[site]['errors'][errcode]['codename'] = codename
-#                 errsBySite[site]['errors'][errcode]['codeval'] = errnum
-#                 errsBySite[site]['errors'][errcode]['diag'] = diag
-#                 errsBySite[site]['errors'][errcode]['count'] = 0
-#             errsBySite[site]['errors'][errcode]['count'] += count 
-#             errsBySite[site]['toterrors'] += count
-#             errsBySite[site]['toterrjobs'] += count
-        for site, errcode, diag, pandaid in day_site_errors_list:
-            errname, errnum = errcode.split(":")
-            codename = filter(lambda err: err['name'] == errname, errorcodelist)[0]['error']
-            if errnum == 0 or errnum == '0' or errnum == None: continue
-            if site not in errsBySite:
-                errsBySite[site] = {}
-                errsBySite[site]['name'] = site
-                errsBySite[site]['errors'] = {}
-                errsBySite[site]['toterrors'] = 0
-                errsBySite[site]['toterrjobs'] = 0
-                errsBySite[site]['pandaids'] = []
-            if errcode not in errsBySite[site]['errors']:
-                errsBySite[site]['errors'][errcode] = {}
-                errsBySite[site]['errors'][errcode]['error'] = errcode
-                errsBySite[site]['errors'][errcode]['codename'] = codename
-                errsBySite[site]['errors'][errcode]['codeval'] = errnum
-                errsBySite[site]['errors'][errcode]['diag'] = diag
-                errsBySite[site]['errors'][errcode]['count'] = 0
-            errsBySite[site]['errors'][errcode]['count'] += 1
-            errsBySite[site]['toterrors'] += 1 
+        __start = time.time()
+
+        if requestParams['nosql'] == 'day_site_errors':
+            for site, errcode, diag, pandaid in day_site_errors_list:
+                errname, errnum = errcode.split(":")
+                codename = filter(lambda err: err['name'] == errname, errorcodelist)[0]['error']
+                if errnum == 0 or errnum == '0' or errnum == None: continue
+                if site not in errsBySite:
+                    errsBySite[site] = {}
+                    errsBySite[site]['name'] = site
+                    errsBySite[site]['errors'] = {}
+                    errsBySite[site]['toterrors'] = 0
+                    errsBySite[site]['toterrjobs'] = 0
+                    errsBySite[site]['pandaids'] = []
+                if errcode not in errsBySite[site]['errors']:
+                    errsBySite[site]['errors'][errcode] = {}
+                    errsBySite[site]['errors'][errcode]['error'] = errcode
+                    errsBySite[site]['errors'][errcode]['codename'] = codename
+                    errsBySite[site]['errors'][errcode]['codeval'] = errnum
+                    errsBySite[site]['errors'][errcode]['diag'] = diag
+                    errsBySite[site]['errors'][errcode]['count'] = 0
+                errsBySite[site]['errors'][errcode]['count'] += 1
+                errsBySite[site]['toterrors'] += 1 
+            
+            for key, value in errsBySite.iteritems():
+                jobs = list(set(value['pandaids']))
+                value['toterrjobs'] = len(jobs)
+                
+        elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
+            for site, errcode, diag, err_count, job_count in day_site_errors_cnt_30m_list:
+                errname, errnum = errcode.split(":")
+                codename = filter(lambda err: err['name'] == errname, errorcodelist)[0]['error']
+                if errnum == 0 or errnum == '0' or errnum == None: continue
+                if site not in errsBySite:
+                    errsBySite[site] = {}
+                    errsBySite[site]['name'] = site
+                    errsBySite[site]['errors'] = {}
+                    errsBySite[site]['toterrors'] = 0
+                    errsBySite[site]['toterrjobs'] = 0
+                if errcode not in errsBySite[site]['errors']:
+                    errsBySite[site]['errors'][errcode] = {}
+                    errsBySite[site]['errors'][errcode]['error'] = errcode
+                    errsBySite[site]['errors'][errcode]['codename'] = codename
+                    errsBySite[site]['errors'][errcode]['codeval'] = errnum
+                    errsBySite[site]['errors'][errcode]['diag'] = diag
+                    errsBySite[site]['errors'][errcode]['count'] = 0
+            errsBySite[site]['errors'][errcode]['count'] += err_count
+            errsBySite[site]['toterrors'] += job_count
         
-        for key, value in errsBySite.iteritems():
-            jobs = list(set(value['pandaids']))
-            value['toterrjobs'] = len(jobs)
-        
-        __nosql_errors_time = time.time() - __nosql_errors_start_time
+                
+        __nosql_errors_time = time.time() - __start
         __errorSummaryPerformance.info("NoSQL postprocessing time (ms) : %s", str(__nosql_errors_time))
     
-    elif (len(day_site_errors_cnt_30m_list) > 0):
-        errsBySite = {}
-        __nosql_errors_start_time = time.time()
-        
-        for site, errcode, diag, err_count, job_count in day_site_errors_cnt_30m_list:
-            errname, errnum = errcode.split(":")
-            codename = filter(lambda err: err['name'] == errname, errorcodelist)[0]['error']
-            if errnum == 0 or errnum == '0' or errnum == None: continue
-            if site not in errsBySite:
-                errsBySite[site] = {}
-                errsBySite[site]['name'] = site
-                errsBySite[site]['errors'] = {}
-                errsBySite[site]['toterrors'] = 0
-                errsBySite[site]['toterrjobs'] = 0
-            if errcode not in errsBySite[site]['errors']:
-                errsBySite[site]['errors'][errcode] = {}
-                errsBySite[site]['errors'][errcode]['error'] = errcode
-                errsBySite[site]['errors'][errcode]['codename'] = codename
-                errsBySite[site]['errors'][errcode]['codeval'] = errnum
-                errsBySite[site]['errors'][errcode]['diag'] = diag
-                errsBySite[site]['errors'][errcode]['count'] = 0
-            errsBySite[site]['errors'][errcode]['count'] += err_count
-            errsBySite[site]['toterrors'] += job_count 
-        
-        __nosql_errors_time = time.time() - __nosql_errors_start_time
-        __errorSummaryPerformance.info("NoSQL postprocessing time (ms) : %s", str(__nosql_errors_time))        
     ## reorganize as sorted lists
     errsByCountL = []
     errsBySiteL = []
