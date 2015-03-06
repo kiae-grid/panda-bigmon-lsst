@@ -3543,7 +3543,7 @@ def errorSummary(request):
                 jobs_list = list(nosql_jobs.objects.filter(date__eq=day).values_list(*values))
                 # new_item = {}
                 for item in jobs_list:
-                    for i in range(0, len(values)-1):
+                    for i in range(0, len(values)):
                         val = item[i]
                         item[i] = {values[i] : val}
                         # new_item[values[i]] = item[i]
