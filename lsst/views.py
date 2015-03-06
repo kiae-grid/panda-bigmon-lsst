@@ -3495,6 +3495,9 @@ def errorSummary(request):
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
 
     jobs = []
+    day_site_errors_list = []
+    day_site_errors_cnt_30m_list = []
+    
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
 #     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
 #     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
@@ -3503,13 +3506,9 @@ def errorSummary(request):
     
     ### start_date and end_date for Cassandra
     # Query: {'modificationtime__range': ['2003-09-29 03:08:10Z', '2015-02-24 19:08:10Z']}
-
-    day_site_errors_list = []
-    day_site_errors_cnt_30m_list = []
-    
     if 'nosql' in requestParams:
-        nosql_request_table = requestParams['nosql']
-        __errorSummaryPerformance.info("NoSQL query table - %s\n", nosql_request_table)
+        nosql_table = requestParams['nosql']
+        __errorSummaryPerformance.info("NoSQL query table - %s\n", nosql_table)
         # construct string array with days between start_date and end_date
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, defaultDatetimeFormat)
@@ -3522,31 +3521,22 @@ def errorSummary(request):
             current_date = (sdate + timedelta(days = day_number))
             dates.append(current_date)
         
-        if nosql_request_table == 'day_site_errors':
-            # query for each day in array
-            __start = time.time()
+        __start = time.time()
+        
+        if nosql_table == 'day_site_errors':
             
             day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
-            # day_site_errors = day_site_errors_named.objects().filter(date__in=dates)
-            # day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
             
-            __timer_day_site_errors = time.time() - __start
-            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(__timer_day_site_errors), len(day_site_errors_list))
+            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(day_site_errors_list))
         
-        elif nosql_request_table == 'day_site_errors_cnt_30m':
-            # query for each day in array
-            __start = time.time()
-            
+        elif nosql_table == 'day_site_errors_cnt_30m':
+           
             day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
-            # day_site_errors = day_site_errors_named.objects().filter(date__in=dates)
-            # day_site_errors = list(day_site_errors_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'count'))
             
-            __timer_day_site_errors = time.time() - __start
-            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(__timer_day_site_errors), len(day_site_errors_cnt_30m_list))                    
+            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
         
-        elif nosql_request_table == 'jobs':
+        elif nosql_table == 'jobs':
             # query for each day in array
-            __start = time.time()
             
             new_list = []
             for day in dates:
@@ -3558,8 +3548,7 @@ def errorSummary(request):
                 new_list.append(new_item)
                 jobs.extend(new_list)
             
-            __timer_jobs = time.time() - __start
-            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(__timer_jobs), len(new_list))
+            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(jobs))
     else:
         __start = time.time()
         
@@ -3567,7 +3556,6 @@ def errorSummary(request):
         
         __timer_jobs = time.time() - __start
         __errorSummaryPerformance.info("SQL query timings (ms) : %s\nNumber of records: %s", str(__timer_jobs), len(jobs))
-        __errorSummaryPerformance.info("Number of records: %s", len(jobs))
     
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
