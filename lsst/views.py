@@ -3204,14 +3204,14 @@ def errorSummaryDict(request,
             __sql_errors_time = time.time() - __start
             __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s", str(__sql_errors_time))
             
-    elif requestParams['chart'] == 'nosql':
-        __start = time.time()
-        
-        for tm, count in day_errors_30m_list:
-            errHist[tm] = count
-        
-        __sql_errors_time = time.time() - __start
-        __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s", str(__sql_errors_time))    
+        elif requestParams['chart'] == 'nosql':
+            __start = time.time()
+            
+            for tm, count in day_errors_30m_list:
+                errHist[tm] = count
+            
+            __sql_errors_time = time.time() - __start
+            __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s", str(__sql_errors_time))    
         
     if ('nosql' not in requestParams) or (requestParams['nosql'] == 'jobs'):
         
