@@ -3510,6 +3510,7 @@ def errorSummaryDict(request,
     errHistL = []
     for k in kys:
         errHistL.append( [ k, errHist[k] ] )
+    __errorSummaryPerformance.info(errHistL)
 
     return errsByCountL, errsBySiteL, errsByUserL, errsByTaskL, suml, errHistL
 
@@ -3578,18 +3579,18 @@ def errorSummary(request):
     
     ### start_date and end_date for Cassandra
     # Query: {'modificationtime__range': ['2003-09-29 03:08:10Z', '2015-02-24 19:08:10Z']}
+
+    # construct string array with days between start_date and end_date
+    startdate, enddate = query['modificationtime__range']
+    start_struct, end_struct = time.strptime(startdate, defaultDatetimeFormat), time.strptime(enddate, defaultDatetimeFormat)
+    sdate, edate = datetime.utcfromtimestamp(mktime(start_struct)), datetime.utcfromtimestamp(mktime(end_struct))
+    total_days = (edate - sdate).days
+    dates = []
+    for day_number in range(total_days):
+        current_date = (sdate + timedelta(days = day_number))
+        dates.append(current_date)
+    
     if 'nosql' in requestParams:
-        # construct string array with days between start_date and end_date
-        startdate, enddate = query['modificationtime__range']
-        start_struct = time.strptime(startdate, defaultDatetimeFormat)
-        end_struct = time.strptime(enddate, defaultDatetimeFormat)
-        sdate = datetime.utcfromtimestamp(mktime(start_struct))
-        edate = datetime.utcfromtimestamp(mktime(end_struct))
-        total_days = (edate - sdate).days
-        dates = []
-        for day_number in range(total_days):
-            current_date = (sdate + timedelta(days = day_number))
-            dates.append(current_date)
         
         __start = time.time()
         
