@@ -3515,16 +3515,15 @@ def errorSummaryDict(request,
  
     # sort data for Error Count Summary diagram
     # for SQL
-    if 'chart' in requestParams:
-        if requestParams['chart'] == 'sql':
-            kys = errHist.keys()
-            kys.sort()
-            errHistL = []
-            for k in kys:
-                errHistL.append( [ k, errHist[k] ] )
+    if 'chart' not in requestParams or requestParams['chart'] == 'sql':
+        kys = errHist.keys()
+        kys.sort()
+        errHistL = []
+        for k in kys:
+            errHistL.append( [ k, errHist[k] ] )
         # for NoSQL
-        elif requestParams['chart'] == 'nosql':
-            errHistL = day_errors_30m_list
+    else:
+         errHistL = day_errors_30m_list
 
     return errsByCountL, errsBySiteL, errsByUserL, errsByTaskL, suml, errHistL
 
