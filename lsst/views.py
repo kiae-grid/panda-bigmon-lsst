@@ -3591,6 +3591,8 @@ def errorSummary(request):
     for day_number in range(total_days):
         current_date = (sdate + timedelta(days = day_number))
         dates.append(current_date)
+    __errorSummaryPerformance.info("DATES : %s\n", dates)
+    
     
     if 'nosql' in requestParams:
         
