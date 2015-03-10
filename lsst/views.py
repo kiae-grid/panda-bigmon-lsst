@@ -3193,6 +3193,20 @@ def errorSummaryDict(request,
             __start = time.time()
             
             for job in jobs:
+                for f in flist:
+                    if job[f]:
+                        if f == 'taskid' and job[f] < 1000000 and 'produsername' not in requestParams:
+                            pass
+                        else:
+                            if not f in sumd: sumd[f] = {}
+                            if not job[f] in sumd[f]: sumd[f][job[f]] = 0
+                            sumd[f][job[f]] += 1
+                if job['specialhandling']:
+                    if not 'specialhandling' in sumd: sumd['specialhandling'] = {}
+                    shl = job['specialhandling'].split()
+                    for v in shl:
+                        if not v in sumd['specialhandling']: sumd['specialhandling'][v] = 0
+                        sumd['specialhandling'][v] += 1
                 for err in errorcodelist:
                     if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
                          
@@ -3223,6 +3237,24 @@ def errorSummaryDict(request,
                 if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
             site = job['computingsite']
             taskname = ''
+            tm = job['modificationtime']
+            tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
+            if not tm in errHist: errHist[tm] = 0
+            errHist[tm] += 1
+            for f in flist:
+                if job[f]:
+                    if f == 'taskid' and job[f] < 1000000 and 'produsername' not in requestParams:
+                        pass
+                    else:
+                        if not f in sumd: sumd[f] = {}
+                        if not job[f] in sumd[f]: sumd[f][job[f]] = 0
+                        sumd[f][job[f]] += 1
+            if job['specialhandling']:
+                if not 'specialhandling' in sumd: sumd['specialhandling'] = {}
+                shl = job['specialhandling'].split()
+                for v in shl:
+                    if not v in sumd['specialhandling']: sumd['specialhandling'][v] = 0
+                    sumd['specialhandling'][v] += 1
             for err in errorcodelist:
                 if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
                     
@@ -3259,7 +3291,7 @@ def errorSummaryDict(request,
             if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
 
         __sql_errors_time = time.time() - __start
-        __errorSummaryPerformance.info("SQL postprocessing (ms) :  %s", str(__sql_errors_time))
+        __errorSummaryPerformance.info("Jobs postprocessing (ms) :  %s", str(__sql_errors_time))
         
 
 #         for job in jobs:
@@ -3415,6 +3447,9 @@ def errorSummaryDict(request,
                 jobs = list(set(value['pandaids']))
                 value['toterrjobs'] = len(jobs)
                 
+            __nosql_errors_time = time.time() - __start
+            __errorSummaryPerformance.info("day_site_errors postprocessing (ms) : %s", str(__nosql_errors_time))
+                
         elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
             for site, errcode, diag, err_count, job_count in day_site_errors_cnt_30m_list:
                 errname, errnum = errcode.split(":")
@@ -3436,8 +3471,8 @@ def errorSummaryDict(request,
                 errsBySite[site]['errors'][errcode]['count'] += err_count
                 errsBySite[site]['toterrors'] += job_count
         
-        __nosql_errors_time = time.time() - __start
-        __errorSummaryPerformance.info("NoSQL postprocessing (ms) : %s", str(__nosql_errors_time))
+            __nosql_errors_time = time.time() - __start
+            __errorSummaryPerformance.info("day_site_errors_cnt_30m postprocessing (ms) : %s", str(__nosql_errors_time))
     
     ## reorganize as sorted lists
     errsByCountL = []
