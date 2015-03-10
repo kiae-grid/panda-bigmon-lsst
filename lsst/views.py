@@ -3387,7 +3387,7 @@ def errorSummaryDict(request,
     
     # processing query results from NoSQL dependent tables:
     # - day_site_errors
-    # - day_site_errors_30m
+    # - day_site_errors_cnt_30m
     elif 'nosql' in requestParams:
         errsBySite = {}
         __start = time.time()
@@ -3412,7 +3412,8 @@ def errorSummaryDict(request,
                     errsBySite[site]['errors'][errcode]['diag'] = diag
                     errsBySite[site]['errors'][errcode]['count'] = 0
                 errsBySite[site]['errors'][errcode]['count'] += 1
-                errsBySite[site]['toterrors'] += 1 
+                errsBySite[site]['toterrors'] += 1
+                errsBySite[site]['pandaids'].append(pandaid)
             
             for key, value in errsBySite.iteritems():
                 jobs = list(set(value['pandaids']))
@@ -3430,8 +3431,8 @@ def errorSummaryDict(request,
                     errsBySite[site] = {}
                     errsBySite[site]['name'] = site
                     errsBySite[site]['errors'] = {}
-                    errsBySite[site]['toterrors'] = err_count
-                    errsBySite[site]['toterrjobs'] = job_count
+                    errsBySite[site]['toterrors'] = 0
+                    errsBySite[site]['toterrjobs'] = 0
                 if errcode not in errsBySite[site]['errors']:
                     errsBySite[site]['errors'][errcode] = {}
                     errsBySite[site]['errors'][errcode]['error'] = errcode
@@ -3440,7 +3441,8 @@ def errorSummaryDict(request,
                     errsBySite[site]['errors'][errcode]['diag'] = diag
                     errsBySite[site]['errors'][errcode]['count'] = err_count
                 errsBySite[site]['errors'][errcode]['count'] += err_count
-                errsBySite[site]['toterrors'] += job_count
+                errsBySite[site]['toterrors'] += err_count
+                errsBySite[site]['toterrjobs'] += job_count
         
             __nosql_errors_time = time.time() - __start
             __errorSummaryPerformance.info("day_site_errors_cnt_30m postprocessing (ms) : %s", str(__nosql_errors_time))
