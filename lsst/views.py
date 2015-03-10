@@ -3188,25 +3188,17 @@ def errorSummaryDict(request,
     errHist = {}
     flist = [ 'cloud', 'computingsite', 'produsername', 'taskid', 'jeditaskid', 'processingtype', 'prodsourcelabel', 'transformation', 'workinggroup', 'specialhandling', 'jobstatus' ]
 
+    # simulating sumd variable for errorSummary.html condifion {% if sumd %}
+    sumd['specialhandling'] = {}
+    
+    # processing data for the "Error count timeline" diagram
     if 'chart' in requestParams:
+        
+        # processing query result from SQL database (table jobsarchived)
         if requestParams['chart'] == 'sql':
             __start = time.time()
             
             for job in jobs:
-                for f in flist:
-                    if job[f]:
-                        if f == 'taskid' and job[f] < 1000000 and 'produsername' not in requestParams:
-                            pass
-                        else:
-                            if not f in sumd: sumd[f] = {}
-                            if not job[f] in sumd[f]: sumd[f][job[f]] = 0
-                            sumd[f][job[f]] += 1
-                if job['specialhandling']:
-                    if not 'specialhandling' in sumd: sumd['specialhandling'] = {}
-                    shl = job['specialhandling'].split()
-                    for v in shl:
-                        if not v in sumd['specialhandling']: sumd['specialhandling'][v] = 0
-                        sumd['specialhandling'][v] += 1
                 for err in errorcodelist:
                     if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
                          
@@ -3217,19 +3209,12 @@ def errorSummaryDict(request,
             
             __sql_errors_time = time.time() - __start
             __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s\n", str(__sql_errors_time))
-            
-#         elif requestParams['chart'] == 'nosql':
-#             __start = time.time()
-#             
-#             for tm, count in day_errors_30m_list:
-#                 errHist[tm] = count
-#             
-#             __sql_errors_time = time.time() - __start
-#             __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s\n", str(__sql_errors_time))    
-        
+    
+    # processing data for Site Errors Summary 
+    # using results from SQL table jobsarchived OR 
+    # from NoSQL table jobs    
     if ('nosql' not in requestParams) or (requestParams['nosql'] == 'jobs'):
         
-        # SITE ERRORS SQL
         __start = time.time()
         
         for job in jobs:
@@ -3237,24 +3222,7 @@ def errorSummaryDict(request,
                 if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
             site = job['computingsite']
             taskname = ''
-            tm = job['modificationtime']
-            tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
-            if not tm in errHist: errHist[tm] = 0
-            errHist[tm] += 1
-            for f in flist:
-                if job[f]:
-                    if f == 'taskid' and job[f] < 1000000 and 'produsername' not in requestParams:
-                        pass
-                    else:
-                        if not f in sumd: sumd[f] = {}
-                        if not job[f] in sumd[f]: sumd[f][job[f]] = 0
-                        sumd[f][job[f]] += 1
-            if job['specialhandling']:
-                if not 'specialhandling' in sumd: sumd['specialhandling'] = {}
-                shl = job['specialhandling'].split()
-                for v in shl:
-                    if not v in sumd['specialhandling']: sumd['specialhandling'][v] = 0
-                    sumd['specialhandling'][v] += 1
+
             for err in errorcodelist:
                 if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
                     
@@ -3417,6 +3385,9 @@ def errorSummaryDict(request,
 #             if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
     #         if taskid in errsByTask: errsByTask[taskid]['toterrjobs'] += 1
     
+    # processing query results from NoSQL dependent tables:
+    # - day_site_errors
+    # - day_site_errors_30m
     elif 'nosql' in requestParams:
         errsBySite = {}
         __start = time.time()
@@ -3540,12 +3511,15 @@ def errorSummaryDict(request,
         for item in suml:
             item['list'] = sorted(item['list'], key=lambda x:-x['kvalue'])
  
+    # sort data for Error Count Summary diagram
+    # for SQL
     if requestParams['chart'] == 'sql':
         kys = errHist.keys()
         kys.sort()
         errHistL = []
         for k in kys:
             errHistL.append( [ k, errHist[k] ] )
+    # for NoSQL
     elif requestParams['chart'] == 'nosql':
         errHistL = day_errors_30m_list
 
@@ -3628,7 +3602,8 @@ def errorSummary(request):
         dates.append(current_date)
     __errorSummaryPerformance.info("DATES : %s\n", dates)
     
-    
+    # get data for Site Errors Summary from Cassandra
+    # tables: "day_site_errors", "day_site_errors_30m", "jobs"
     if 'nosql' in requestParams:
         
         __start = time.time()
@@ -3672,6 +3647,8 @@ def errorSummary(request):
 
     tasknamedict = taskNameDict(jobs)
     
+    # get data for Error Count Timeline from Cassandra
+    # from table "day_errors_30m"
     if 'chart' in requestParams:
         if requestParams['chart'] == 'nosql':
             __start = time.time()
@@ -3679,7 +3656,8 @@ def errorSummary(request):
             day_errors_30m_list = list(day_errors_30m.objects.filter(date__in=dates).values_list('base_mtime', 'count'))
             
             __timer_chart = time.time() - __start
-            __errorSummaryPerformance.info("day_errors_30m table query (ms) : %s\nNumber of records : %s\n", str(__timer_chart), len(day_errors_30m_list))
+            __errorSummaryPerformance.info("day_errors_30m table query (ms) : %s\nNumber of records : %s", str(__timer_chart), len(day_errors_30m_list))
+    
     ## Build the error summary.
     errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,
                                                                                       jobs, 
