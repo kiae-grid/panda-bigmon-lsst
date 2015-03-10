@@ -3170,7 +3170,13 @@ def jobStateSummary(jobs):
         statecount[job['jobstatus']] += 1
     return statecount
 
-def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list, day_site_errors_cnt_30m_list):
+def errorSummaryDict(request,
+                     jobs, 
+                     tasknamedict, 
+                     testjobs, 
+                     day_site_errors_list, 
+                     day_site_errors_cnt_30m_list,
+                     day_errors_30m_list):
     """ take a job list and produce error summaries from it """
     errsByCount = {}
     errsBySite = {}
@@ -3181,72 +3187,128 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list,
     errHist = {}
     flist = [ 'cloud', 'computingsite', 'produsername', 'taskid', 'jeditaskid', 'processingtype', 'prodsourcelabel', 'transformation', 'workinggroup', 'specialhandling', 'jobstatus' ]
 
-    ### TEST SQL AGGREGATION TIME
-    __sql_errors_start_time = time.time()
-    
+    if 'chart' in requestParams:
+        if requestParams['chart'] == 'sql':
+            __start = time.time()
+            
+            for job in jobs:
+                for err in errorcodelist:
+                    if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
+                         
+                        tm = job['modificationtime']
+                        tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
+                        if not tm in errHist: errHist[tm] = 0
+                        errHist[tm] += 1
+            
+            __sql_errors_time = time.time() - __start
+            __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s", str(__sql_errors_time))
+            
+    elif requestParams['chart'] == 'nosql':
+        __start = time.time()
+        
+        for tm, count in day_errors_30m_list:
+            errHist[tm] = count
+        
+        __sql_errors_time = time.time() - __start
+        __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s", str(__sql_errors_time))    
+        
     if ('nosql' not in requestParams) or (requestParams['nosql'] == 'jobs'):
+        
+        # SITE ERRORS SQL
+        __start = time.time()
+        
         for job in jobs:
             if not testjobs:
                 if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
             site = job['computingsite']
-            if 'cloud' in requestParams:
-                if site in homeCloud and homeCloud[site] != requestParams['cloud']: continue
-            user = job['produsername']
             taskname = ''
-            if job['jeditaskid'] > 0:
-                taskid = job['jeditaskid']
-                if taskid in tasknamedict:
-                    taskname = tasknamedict[taskid]
-                tasktype = 'jeditaskid'
-            else:
-                taskid = job['taskid']
-                if taskid in tasknamedict:
-                    taskname = tasknamedict[taskid]
-                tasktype = 'taskid'
+            for err in errorcodelist:
+                if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
+   
+                    if site not in errsBySite:
+                        errsBySite[site] = {}
+                        errsBySite[site]['name'] = site
+                        errsBySite[site]['errors'] = {}
+                        errsBySite[site]['toterrors'] = 0
+                        errsBySite[site]['toterrjobs'] = 0
+                    if errcode not in errsBySite[site]['errors']:
+                        errsBySite[site]['errors'][errcode] = {}
+                        errsBySite[site]['errors'][errcode]['error'] = errcode
+                        errsBySite[site]['errors'][errcode]['codename'] = err['error']
+                        errsBySite[site]['errors'][errcode]['codeval'] = errnum
+                        errsBySite[site]['errors'][errcode]['diag'] = errdiag
+                        errsBySite[site]['errors'][errcode]['count'] = 0
+                    errsBySite[site]['errors'][errcode]['count'] += 1
+                    errsBySite[site]['toterrors'] += 1
+                    
+            if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
+
+        __sql_errors_time = time.time() - __start
+        __errorSummaryPerformance.info("SQL postprocessing (ms) :  %s", str(__sql_errors_time))
+        
+
+#         for job in jobs:
+#             if not testjobs:
+#                 if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
+#             site = job['computingsite']
+#             if 'cloud' in requestParams:
+#                 if site in homeCloud and homeCloud[site] != requestParams['cloud']: continue
+#             user = job['produsername']
+#             taskname = ''
+#             if job['jeditaskid'] > 0:
+#                 taskid = job['jeditaskid']
+#                 if taskid in tasknamedict:
+#                     taskname = tasknamedict[taskid]
+#                 tasktype = 'jeditaskid'
+#             else:
+#                 taskid = job['taskid']
+#                 if taskid in tasknamedict:
+#                     taskname = tasknamedict[taskid]
+#                 tasktype = 'taskid'
 #             tm = job['modificationtime']
 #             tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
 #             if not tm in errHist: errHist[tm] = 0
 #             errHist[tm] += 1
     
             ## Overall summary
-            for f in flist:
-                if job[f]:
-                    if f == 'taskid' and job[f] < 1000000 and 'produsername' not in requestParams:
-                        pass
-                    else:
-                        if not f in sumd: sumd[f] = {}
-                        if not job[f] in sumd[f]: sumd[f][job[f]] = 0
-                        sumd[f][job[f]] += 1
-            if job['specialhandling']:
-                if not 'specialhandling' in sumd: sumd['specialhandling'] = {}
-                shl = job['specialhandling'].split()
-                for v in shl:
-                    if not v in sumd['specialhandling']: sumd['specialhandling'][v] = 0
-                    sumd['specialhandling'][v] += 1
-    
-          
-            for err in errorcodelist:
-                if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
-                    
-                    tm = job['modificationtime']
-                    tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
-                    if not tm in errHist: errHist[tm] = 0
-                    errHist[tm] += 1
-
-                    errval = job[err['error']]
-                    ## error code of zero is not an error
-                    if errval == 0 or errval == '0' or errval == None: continue
-                    errdiag = ''
-                    try:
-                        errnum = int(errval)
-                        if err['error'] in errorCodes and errnum in errorCodes[err['error']]:
-                            errdiag = errorCodes[err['error']][errnum]
-                    except:
-                        errnum = errval
-                    errcode = "%s:%s" % ( err['name'], errnum )
-                    if err['diag']:
-                        errdiag = job[err['diag']]
-                        
+#             for f in flist:
+#                 if job[f]:
+#                     if f == 'taskid' and job[f] < 1000000 and 'produsername' not in requestParams:
+#                         pass
+#                     else:
+#                         if not f in sumd: sumd[f] = {}
+#                         if not job[f] in sumd[f]: sumd[f][job[f]] = 0
+#                         sumd[f][job[f]] += 1
+#             if job['specialhandling']:
+#                 if not 'specialhandling' in sumd: sumd['specialhandling'] = {}
+#                 shl = job['specialhandling'].split()
+#                 for v in shl:
+#                     if not v in sumd['specialhandling']: sumd['specialhandling'][v] = 0
+#                     sumd['specialhandling'][v] += 1
+#     
+#           
+#             for err in errorcodelist:
+#                 if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
+#                     
+#                     tm = job['modificationtime']
+#                     tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
+#                     if not tm in errHist: errHist[tm] = 0
+#                     errHist[tm] += 1
+# 
+#                     errval = job[err['error']]
+#                     ## error code of zero is not an error
+#                     if errval == 0 or errval == '0' or errval == None: continue
+#                     errdiag = ''
+#                     try:
+#                         errnum = int(errval)
+#                         if err['error'] in errorCodes and errnum in errorCodes[err['error']]:
+#                             errdiag = errorCodes[err['error']][errnum]
+#                     except:
+#                         errnum = errval
+#                     errcode = "%s:%s" % ( err['name'], errnum )
+#                     if err['diag']:
+#                         errdiag = job[err['diag']]
+#                         
     #                 if errcode not in errsByCount:
     #                     errsByCount[errcode] = {}
     #                     errsByCount[errcode]['error'] = errcode
@@ -3271,21 +3333,21 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list,
     #                 errsByUser[user]['errors'][errcode]['count'] += 1
     #                 errsByUser[user]['toterrors'] += 1
     
-                    if site not in errsBySite:
-                        errsBySite[site] = {}
-                        errsBySite[site]['name'] = site
-                        errsBySite[site]['errors'] = {}
-                        errsBySite[site]['toterrors'] = 0
-                        errsBySite[site]['toterrjobs'] = 0
-                    if errcode not in errsBySite[site]['errors']:
-                        errsBySite[site]['errors'][errcode] = {}
-                        errsBySite[site]['errors'][errcode]['error'] = errcode
-                        errsBySite[site]['errors'][errcode]['codename'] = err['error']
-                        errsBySite[site]['errors'][errcode]['codeval'] = errnum
-                        errsBySite[site]['errors'][errcode]['diag'] = errdiag
-                        errsBySite[site]['errors'][errcode]['count'] = 0
-                    errsBySite[site]['errors'][errcode]['count'] += 1
-                    errsBySite[site]['toterrors'] += 1
+#                     if site not in errsBySite:
+#                         errsBySite[site] = {}
+#                         errsBySite[site]['name'] = site
+#                         errsBySite[site]['errors'] = {}
+#                         errsBySite[site]['toterrors'] = 0
+#                         errsBySite[site]['toterrjobs'] = 0
+#                     if errcode not in errsBySite[site]['errors']:
+#                         errsBySite[site]['errors'][errcode] = {}
+#                         errsBySite[site]['errors'][errcode]['error'] = errcode
+#                         errsBySite[site]['errors'][errcode]['codename'] = err['error']
+#                         errsBySite[site]['errors'][errcode]['codeval'] = errnum
+#                         errsBySite[site]['errors'][errcode]['diag'] = errdiag
+#                         errsBySite[site]['errors'][errcode]['count'] = 0
+#                     errsBySite[site]['errors'][errcode]['count'] += 1
+#                     errsBySite[site]['toterrors'] += 1
                     
     #                 if tasktype == 'jeditaskid' or taskid > 1000000 or 'produsername' in requestParams:
     #                     if taskid not in errsByTask:
@@ -3305,12 +3367,8 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list,
     #                         errsByTask[taskid]['errors'][errcode]['count'] = 0
     #                     errsByTask[taskid]['errors'][errcode]['count'] += 1
     #                     errsByTask[taskid]['toterrors'] += 1
-            if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
+#             if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
     #         if taskid in errsByTask: errsByTask[taskid]['toterrjobs'] += 1
-
-        ### TEST SQL AGGREGATION TIME
-        __sql_errors_time = time.time() - __sql_errors_start_time
-        __errorSummaryPerformance.info("SQL postprocessing time (ms) :  %s", str(__sql_errors_time))
     
     elif 'nosql' in requestParams:
         errsBySite = {}
@@ -3363,9 +3421,8 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list,
                 errsBySite[site]['errors'][errcode]['count'] += err_count
                 errsBySite[site]['toterrors'] += job_count
         
-                
         __nosql_errors_time = time.time() - __start
-        __errorSummaryPerformance.info("NoSQL postprocessing time (ms) : %s", str(__nosql_errors_time))
+        __errorSummaryPerformance.info("NoSQL postprocessing (ms) : %s", str(__nosql_errors_time))
     
     ## reorganize as sorted lists
     errsByCountL = []
@@ -3460,13 +3517,13 @@ def errorSummary(request):
     else: 
         db_engine = dbaccess.get('default').get('ENGINE')
     
-    log_splitter = '-'
-    for s in range(0, 79):
-        log_splitter += '-'  
-          
-    __errorSummaryPerformance.info("\n%s --- Error Summary Performance Test for %s: \n%s\nURL : %s \n", 
-                               datetime.now().__str__(), db_engine, log_splitter, request.META['QUERY_STRING'])
-
+    query_parameters = ""
+    for key, value in parse_qs(request.META['QUERY_STRING']).iteritems():
+        query_parameters += key.ljust(20," ") + " : %s\n" % value[0]   
+    __errorSummaryPerformance.info("\n%s --- Error Summary Performance Test for %s: \n%s\n", 
+                               datetime.now().__str__(), db_engine, ''.ljust(70,'-'))
+    __errorSummaryPerformance.info("\nQuery parameters \n%s\n%s", ''.ljust(50,'-'), query_parameters)
+    test_result_str = "%s query timings (ms): %s\nNumber of records: %s"
     testjobs = False
     if 'prodsourcelabel' in requestParams and requestParams['prodsourcelabel'].lower().find('test') >= 0:
         testjobs = True
@@ -3507,8 +3564,6 @@ def errorSummary(request):
     ### start_date and end_date for Cassandra
     # Query: {'modificationtime__range': ['2003-09-29 03:08:10Z', '2015-02-24 19:08:10Z']}
     if 'nosql' in requestParams:
-        nosql_table = requestParams['nosql']
-        __errorSummaryPerformance.info("NoSQL query table - %s\n", nosql_table)
         # construct string array with days between start_date and end_date
         startdate, enddate = query['modificationtime__range']
         start_struct = time.strptime(startdate, defaultDatetimeFormat)
@@ -3527,13 +3582,13 @@ def errorSummary(request):
             
             day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             
-            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(day_site_errors_list))
+            __errorSummaryPerformance.info(test_result_str, 'NoSQL', str(time.time() - __start), len(day_site_errors_list))
         
         elif nosql_table == 'day_site_errors_cnt_30m':
            
             day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
-            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
+            __errorSummaryPerformance.info(test_result_str, 'NoSQL', str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
         
         elif nosql_table == 'jobs':
             # query for each day in array
@@ -3548,22 +3603,35 @@ def errorSummary(request):
                     new_list.append(new_item)
             jobs.extend(new_list)
             
-            __errorSummaryPerformance.info("NoSQL query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(jobs))
+            __errorSummaryPerformance.info(test_result_str, 'NoSQL', str(time.time() - __start), len(jobs))
     else:
         __start = time.time()
         
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         
         __timer_jobs = time.time() - __start
-        __errorSummaryPerformance.info("SQL query timings (ms) : %s\nNumber of records: %s", str(__timer_jobs), len(jobs))
+        __errorSummaryPerformance.info(test_result_str, 'SQL', str(__timer_jobs), len(jobs))
     
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
 
     tasknamedict = taskNameDict(jobs)
     
+    day_errors_30m_list = []
+    if 'chart' in requestParams:
+        if requestParams['chart'] == 'nosql':
+            __start = time.time()
+            day_errors_30m_list = list(day_errors_30m.objects.filter(date__in=dates).values_list('base_mtime', 'count'))
+            __timer_chart = time.time() - __start
+            __errorSummaryPerformance.info("day_errors_30m table query (ms) : %s\nNumber of records : %s\n", str(__timer_chart), len(day_errors_30m_list))
     ## Build the error summary.
-    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs, day_site_errors_list, day_site_errors_cnt_30m_list)
+    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,
+                                                                                      jobs, 
+                                                                                      tasknamedict, 
+                                                                                      testjobs, 
+                                                                                      day_site_errors_list, 
+                                                                                      day_site_errors_cnt_30m_list, 
+                                                                                      day_errors_30m_list)
 
     ## Build the state summary and add state info to site error summary
     #notime = True
