@@ -3208,7 +3208,7 @@ def errorSummaryDict(request,
                         errHist[tm] += 1
             
             __sql_errors_time = time.time() - __start
-            __errorSummaryPerformance.info("Chart postprocessing".ljust(40," ") + " : %s", str(__sql_errors_time))
+            __errorSummaryPerformance.info("chart postprocessing".ljust(40," ") + " : %s", str(__sql_errors_time))
     
     # processing data for Site Errors Summary 
     # using results from SQL table jobsarchived OR 
@@ -3259,7 +3259,7 @@ def errorSummaryDict(request,
             if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
 
         __sql_errors_time = time.time() - __start
-        __errorSummaryPerformance.info("jobs postprocessing".ljust(40," ") + " : %s", str(__sql_errors_time))
+        __errorSummaryPerformance.info("<jobs> postprocessing".ljust(40," ") + " : %s", str(__sql_errors_time))
         
 
 #         for job in jobs:
@@ -3608,7 +3608,7 @@ def errorSummary(request):
     if 'nosql' in requestParams:
         
         __start = time.time()
-        __log_str = requestParams['nosql'].ljust(40, " ") 
+        __log_str = ("<" + requestParams['nosql'] + ">").ljust(40, " ") 
         
         if requestParams['nosql'] == 'day_site_errors':
             
@@ -3642,7 +3642,7 @@ def errorSummary(request):
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         
         __timer_jobs = time.time() - __start
-        __errorSummaryPerformance.info("jobs".ljust(40," ") + " : %s (number of records = %s)", str(__timer_jobs), len(jobs))
+        __errorSummaryPerformance.info("<jobs>".ljust(40," ") + " : %s (number of records = %s)", str(__timer_jobs), len(jobs))
     
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
@@ -3658,7 +3658,7 @@ def errorSummary(request):
             day_errors_30m_list = list(day_errors_30m.objects.filter(date__in=dates).values_list('base_mtime', 'count'))
             
             __timer_chart = time.time() - __start
-            __errorSummaryPerformance.info("day_errors_30m".ljust(40, " ") + " : %s (number of records = %s)", str(__timer_chart), len(day_errors_30m_list))
+            __errorSummaryPerformance.info("<day_errors_30m>".ljust(40, " ") + " : %s (number of records = %s)", str(__timer_chart), len(day_errors_30m_list))
     
     ## Build the error summary.
     errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,
