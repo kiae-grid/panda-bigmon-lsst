@@ -3259,7 +3259,7 @@ def errorSummaryDict(request,
             if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
 
         __sql_errors_time = time.time() - __start
-        __errorSummaryPerformance.info("Jobs postprocessing".ljust(30," ") + ": %s", str(__sql_errors_time))
+        __errorSummaryPerformance.info("jobs postprocessing".ljust(40," ") + " : %s", str(__sql_errors_time))
         
 
 #         for job in jobs:
@@ -3420,7 +3420,7 @@ def errorSummaryDict(request,
                 value['toterrjobs'] = len(jobs)
                 
             __nosql_errors_time = time.time() - __start
-            __errorSummaryPerformance.info("day_site_errors postprocessing".ljust(30," ") + ": %s", str(__nosql_errors_time))
+            __errorSummaryPerformance.info("day_site_errors postprocessing".ljust(40," ") + " : %s", str(__nosql_errors_time))
                 
         elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
             for site, errcode, diag, err_count, job_count in day_site_errors_cnt_30m_list:
@@ -3445,7 +3445,7 @@ def errorSummaryDict(request,
                 errsBySite[site]['toterrjobs'] += job_count
         
             __nosql_errors_time = time.time() - __start
-            __errorSummaryPerformance.info("day_site_errors_cnt_30m postprocessing".ljust(30," ") + ": %s", str(__nosql_errors_time))
+            __errorSummaryPerformance.info("day_site_errors_cnt_30m postprocessing".ljust(40," ") + " : %s", str(__nosql_errors_time))
     
     ## reorganize as sorted lists
     errsByCountL = []
@@ -3549,7 +3549,7 @@ def errorSummary(request):
     query_parameters = ""
     for key, value in urlparse.parse_qs(request.META['QUERY_STRING']).iteritems():
         query_parameters += key.ljust(20," ") + " : %s\n" % value[0]   
-    __errorSummaryPerformance.info("%s --- Error Summary Performance Test for %s: \n%s", 
+    __errorSummaryPerformance.info("\n%s --- Error Summary Performance Test for %s: \n%s", 
                                datetime.now().__str__(), db_engine, ''.ljust(70,'-'))
     __errorSummaryPerformance.info("Query parameters \n%s\n%s", ''.ljust(17,'-'), query_parameters)
     testjobs = False
