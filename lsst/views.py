@@ -50,6 +50,7 @@ from cqlengine.models import Model
 
 from settings.local import dbaccess
 import ErrorCodes
+import urlparse
 errorFields = []
 errorCodes = {}
 errorStages = {}
@@ -3518,7 +3519,7 @@ def errorSummary(request):
         db_engine = dbaccess.get('default').get('ENGINE')
     
     query_parameters = ""
-    for key, value in parse_qs(request.META['QUERY_STRING']).iteritems():
+    for key, value in urlparse.parse_qs(request.META['QUERY_STRING']).iteritems():
         query_parameters += key.ljust(20," ") + " : %s\n" % value[0]   
     __errorSummaryPerformance.info("\n%s --- Error Summary Performance Test for %s: \n%s\n", 
                                datetime.now().__str__(), db_engine, ''.ljust(70,'-'))
