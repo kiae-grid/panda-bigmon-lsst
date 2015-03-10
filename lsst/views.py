@@ -3555,6 +3555,7 @@ def errorSummary(request):
     jobs = []
     day_site_errors_list = []
     day_site_errors_cnt_30m_list = []
+    nosql_table = ''
     
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
 #     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
