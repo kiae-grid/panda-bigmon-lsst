@@ -3225,6 +3225,20 @@ def errorSummaryDict(request,
             taskname = ''
             for err in errorcodelist:
                 if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
+                    
+                    errval = job[err['error']]
+                    ## error code of zero is not an error
+                    if errval == 0 or errval == '0' or errval == None: continue
+                    errdiag = ''
+                    try:
+                        errnum = int(errval)
+                        if err['error'] in errorCodes and errnum in errorCodes[err['error']]:
+                            errdiag = errorCodes[err['error']][errnum]
+                    except:
+                        errnum = errval
+                    errcode = "%s:%s" % ( err['name'], errnum )
+                    if err['diag']:
+                        errdiag = job[err['diag']]
    
                     if site not in errsBySite:
                         errsBySite[site] = {}
