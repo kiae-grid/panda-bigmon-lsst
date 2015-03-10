@@ -3202,16 +3202,16 @@ def errorSummaryDict(request,
                         errHist[tm] += 1
             
             __sql_errors_time = time.time() - __start
-            __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s", str(__sql_errors_time))
+            __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s\n", str(__sql_errors_time))
             
-        elif requestParams['chart'] == 'nosql':
-            __start = time.time()
-            
-            for tm, count in day_errors_30m_list:
-                errHist[tm] = count
-            
-            __sql_errors_time = time.time() - __start
-            __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s", str(__sql_errors_time))    
+#         elif requestParams['chart'] == 'nosql':
+#             __start = time.time()
+#             
+#             for tm, count in day_errors_30m_list:
+#                 errHist[tm] = count
+#             
+#             __sql_errors_time = time.time() - __start
+#             __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s\n", str(__sql_errors_time))    
         
     if ('nosql' not in requestParams) or (requestParams['nosql'] == 'jobs'):
         
@@ -3505,12 +3505,14 @@ def errorSummaryDict(request,
         for item in suml:
             item['list'] = sorted(item['list'], key=lambda x:-x['kvalue'])
  
-    kys = errHist.keys()
-    kys.sort()
-    errHistL = []
-    for k in kys:
-        errHistL.append( [ k, errHist[k] ] )
-    __errorSummaryPerformance.info(errHistL)
+    if requestParams['chart'] == 'sql':
+        kys = errHist.keys()
+        kys.sort()
+        errHistL = []
+        for k in kys:
+            errHistL.append( [ k, errHist[k] ] )
+    elif requestParams['chart'] == 'nosql':
+        errHistL = day_errors_30m_list
 
     return errsByCountL, errsBySiteL, errsByUserL, errsByTaskL, suml, errHistL
 
