@@ -3523,8 +3523,7 @@ def errorSummary(request):
         query_parameters += key.ljust(20," ") + " : %s\n" % value[0]   
     __errorSummaryPerformance.info("\n%s --- Error Summary Performance Test for %s: \n%s\n", 
                                datetime.now().__str__(), db_engine, ''.ljust(70,'-'))
-    __errorSummaryPerformance.info("\nQuery parameters \n%s\n%s", ''.ljust(50,'-'), query_parameters)
-    test_result_str = "%s query timings (ms): %s\nNumber of records: %s"
+    __errorSummaryPerformance.info("\nQuery parameters \n%s\n%s", ''.ljust(17,'-'), query_parameters)
     testjobs = False
     if 'prodsourcelabel' in requestParams and requestParams['prodsourcelabel'].lower().find('test') >= 0:
         testjobs = True
@@ -3555,7 +3554,7 @@ def errorSummary(request):
     jobs = []
     day_site_errors_list = []
     day_site_errors_cnt_30m_list = []
-    nosql_table = ''
+    day_errors_30m_list = []
     
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
 #     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
@@ -3580,19 +3579,19 @@ def errorSummary(request):
         
         __start = time.time()
         
-        if nosql_table == 'day_site_errors':
+        if requestParams['nosql'] == 'day_site_errors':
             
             day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             
-            __errorSummaryPerformance.info(test_result_str, 'NoSQL', str(time.time() - __start), len(day_site_errors_list))
+            __errorSummaryPerformance.info("day_site_errors query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(day_site_errors_list))
         
-        elif nosql_table == 'day_site_errors_cnt_30m':
+        elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
            
             day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
-            __errorSummaryPerformance.info(test_result_str, 'NoSQL', str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
+            __errorSummaryPerformance.info("day_site_errors_cnt_30m query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
         
-        elif nosql_table == 'jobs':
+        elif requestParams['nosql'] == 'jobs':
             # query for each day in array
             
             new_list = []
@@ -3605,25 +3604,26 @@ def errorSummary(request):
                     new_list.append(new_item)
             jobs.extend(new_list)
             
-            __errorSummaryPerformance.info(test_result_str, 'NoSQL', str(time.time() - __start), len(jobs))
+            __errorSummaryPerformance.info("Jobs (NoSQL) query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(jobs))
     else:
         __start = time.time()
         
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         
         __timer_jobs = time.time() - __start
-        __errorSummaryPerformance.info(test_result_str, 'SQL', str(__timer_jobs), len(jobs))
+        __errorSummaryPerformance.info("Jobs (SQL) query timings (ms): %s\nNumber of records: %s", str(__timer_jobs), len(jobs))
     
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
 
     tasknamedict = taskNameDict(jobs)
     
-    day_errors_30m_list = []
     if 'chart' in requestParams:
         if requestParams['chart'] == 'nosql':
             __start = time.time()
+            
             day_errors_30m_list = list(day_errors_30m.objects.filter(date__in=dates).values_list('base_mtime', 'count'))
+            
             __timer_chart = time.time() - __start
             __errorSummaryPerformance.info("day_errors_30m table query (ms) : %s\nNumber of records : %s\n", str(__timer_chart), len(day_errors_30m_list))
     ## Build the error summary.
