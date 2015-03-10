@@ -3208,7 +3208,7 @@ def errorSummaryDict(request,
                         errHist[tm] += 1
             
             __sql_errors_time = time.time() - __start
-            __errorSummaryPerformance.info("Chart postprocessing (ms) :  %s\n", str(__sql_errors_time))
+            __errorSummaryPerformance.info("Chart postprocessing".ljust(30," ") + ": %s", str(__sql_errors_time))
     
     # processing data for Site Errors Summary 
     # using results from SQL table jobsarchived OR 
@@ -3259,7 +3259,7 @@ def errorSummaryDict(request,
             if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
 
         __sql_errors_time = time.time() - __start
-        __errorSummaryPerformance.info("Jobs postprocessing (ms) :  %s", str(__sql_errors_time))
+        __errorSummaryPerformance.info("Jobs postprocessing".ljust(30," ") + ": %s", str(__sql_errors_time))
         
 
 #         for job in jobs:
@@ -3420,7 +3420,7 @@ def errorSummaryDict(request,
                 value['toterrjobs'] = len(jobs)
                 
             __nosql_errors_time = time.time() - __start
-            __errorSummaryPerformance.info("day_site_errors postprocessing (ms) : %s", str(__nosql_errors_time))
+            __errorSummaryPerformance.info("day_site_errors postprocessing".ljust(30," ") + ": %s", str(__nosql_errors_time))
                 
         elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
             for site, errcode, diag, err_count, job_count in day_site_errors_cnt_30m_list:
@@ -3445,7 +3445,7 @@ def errorSummaryDict(request,
                 errsBySite[site]['toterrjobs'] += job_count
         
             __nosql_errors_time = time.time() - __start
-            __errorSummaryPerformance.info("day_site_errors_cnt_30m postprocessing (ms) : %s", str(__nosql_errors_time))
+            __errorSummaryPerformance.info("day_site_errors_cnt_30m postprocessing".ljust(30," ") + ": %s", str(__nosql_errors_time))
     
     ## reorganize as sorted lists
     errsByCountL = []
@@ -3614,13 +3614,13 @@ def errorSummary(request):
             
             day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             
-            __errorSummaryPerformance.info("day_site_errors query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(day_site_errors_list))
+            __errorSummaryPerformance.info(requestParams['nosql'].ljust(30," ") + ": %s Number of records: %s".ljust(20," "), str(time.time() - __start), len(day_site_errors_list))
         
         elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
            
             day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
-            __errorSummaryPerformance.info("day_site_errors_cnt_30m query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
+            __errorSummaryPerformance.info(requestParams['nosql'].ljust(30," ") + ": %s Number of records: %s".ljust(20," "), str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
         
         elif requestParams['nosql'] == 'jobs':
             # query for each day in array
@@ -3635,14 +3635,14 @@ def errorSummary(request):
                     new_list.append(new_item)
             jobs.extend(new_list)
             
-            __errorSummaryPerformance.info("Jobs (NoSQL) query timings (ms): %s\nNumber of records: %s", str(time.time() - __start), len(jobs))
+            __errorSummaryPerformance.info(requestParams['nosql'].ljust(30," ") + ": %s Number of records: %s".ljust(20," "), str(time.time() - __start), len(jobs))
     else:
         __start = time.time()
         
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         
         __timer_jobs = time.time() - __start
-        __errorSummaryPerformance.info("Jobs (SQL) query timings (ms): %s\nNumber of records: %s", str(__timer_jobs), len(jobs))
+        __errorSummaryPerformance.info("Jobs".ljust(30," ") + ": %s Number of records: %s", str(__timer_jobs), len(jobs))
     
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
