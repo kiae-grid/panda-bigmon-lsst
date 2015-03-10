@@ -3439,7 +3439,7 @@ def errorSummaryDict(request,
                     errsBySite[site]['errors'][errcode]['codename'] = codename
                     errsBySite[site]['errors'][errcode]['codeval'] = errnum
                     errsBySite[site]['errors'][errcode]['diag'] = diag
-                    errsBySite[site]['errors'][errcode]['count'] = err_count
+                    errsBySite[site]['errors'][errcode]['count'] = 0
                 errsBySite[site]['errors'][errcode]['count'] += err_count
                 errsBySite[site]['toterrors'] += err_count
                 errsBySite[site]['toterrjobs'] += job_count
