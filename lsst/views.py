@@ -45,9 +45,14 @@ from core.common.models import JediWorkQueue
 from core.common.models import RequestStat
 from core.common.settings.config import ENV
 
+# CASSANDRA IMPORTS
 from cqlengine import columns
 from cqlengine.models import Model
 from cassandra.cluster import Cluster
+from cqlengine import connection
+from cassandra.auth import PlainTextAuthProvider
+
+# CASSANDRA authentication provider
 ap = PlainTextAuthProvider(username=dbaccess['cassandra']['USER'], password=dbaccess['cassandra']['PASSWORD'])
 cassandra_hosts = str(dbaccess['cassandra']['HOST']).split(',')
 
