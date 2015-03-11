@@ -3642,12 +3642,18 @@ def errorSummary(request):
             day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_list))
+            
+            day_site_errors_cql_string = "select computingsite, errcode, diag, pandaid from day_site_errors where date in (%s)", str(dates)
+            __errorSummaryPerformance.info(day_site_errors_cql_string)
         
         elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
            
             day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
+            day_site_errors_cnt_30m_cql_string = "select computingsite, errcode, diag, err_count, job_count from day_site_errors_cnt_30m where date in (%s)", str(dates)
+            __errorSummaryPerformance.info(day_site_errors_cnt_30m_cql_string)
+        
         
         elif requestParams['nosql'] == 'jobs':
             # query for each day in array
@@ -3663,6 +3669,10 @@ def errorSummary(request):
             jobs.extend(new_list)
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(jobs))
+
+            for day in dates:
+                __errorSummaryPerformance.info("select %s from jobs where date = %;\n", *values, day)
+                
     else:
         __start = time.time()
         
