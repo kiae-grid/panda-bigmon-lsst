@@ -47,6 +47,10 @@ from core.common.settings.config import ENV
 
 from cqlengine import columns
 from cqlengine.models import Model
+from cassandra.cluster import Cluster
+ap = PlainTextAuthProvider(username=dbaccess['cassandra']['USER'], password=dbaccess['cassandra']['PASSWORD'])
+cassandra_hosts = str(dbaccess['cassandra']['HOST']).split(',')
+
 
 from settings.local import dbaccess
 import ErrorCodes
@@ -3545,6 +3549,24 @@ def errorSummary(request):
         db_engine = 'Cassandra'
     else: 
         db_engine = dbaccess.get('default').get('ENGINE')
+    
+    # Setup connection to the database schema, according to the version:
+    #------------------------------------------------------------------
+    # version=bigpanda_archive
+    # version=bigpanda_archive_extended
+    # version=bigpanda_archive_prolonged
+    #
+    # by default: bigpanda_archive
+    if 'version' in requestParams:
+        connection.setup(cassandra_hosts, 
+                         requestParams['version'], 
+                         protocol_version=2, 
+                         auth_provider=ap)
+    else:
+        connection.setup(cassandra_hosts, 
+                         "bigpanda_archive", 
+                         protocol_version=2, 
+                         auth_provider=ap)
     
     query_parameters = ""
     for key, value in urlparse.parse_qs(request.META['QUERY_STRING']).iteritems():
