@@ -3688,12 +3688,16 @@ def errorSummary(request):
         
         __errorSummaryPerformance.info("REQUEST:\n")
         __errorSummaryPerformance.info(str(Jobsarchived4.objects.filter(**query)))
-        __errorSummaryPerformance.info(str(Jobsarchived.objects.filter(**query)))
+        __errorSummaryPerformance.info(str(Jobsdefined4.objects.filter(**query)))
+        __errorSummaryPerformance.info(str(Jobsactive4.objects.filter(**query)))
+        __errorSummaryPerformance.info(str(Jobswaiting4.objects.filter(**query)))
         
         __start = time.time()
         
+        jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+        jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+        jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-        jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
         
         __timer_jobs = time.time() - __start
         __errorSummaryPerformance.info("<jobs>".ljust(40," ") + " : %s (number of records = %s)", str(__timer_jobs), len(jobs))
