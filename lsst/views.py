@@ -3630,12 +3630,12 @@ def errorSummary(request):
     total_days = (edate - sdate).days
     dates = []
     for day_number in range(total_days):
-        current_date = (sdate + timedelta(days = day_number))
+        current_date = (sdate.date() + timedelta(days = day_number))
         dates.append(current_date)
     
     date_str = []
     for item in dates:
-        date_str.append(item.strftime(defaultDatetimeFormat))
+        date_str.append(item.strftime("%Y-%m-%d"))
     # get data for Site Errors Summary from Cassandra
     # tables: "day_site_errors", "day_site_errors_30m", "jobs"
     if 'nosql' in requestParams:
