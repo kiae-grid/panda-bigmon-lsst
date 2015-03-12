@@ -3623,7 +3623,7 @@ def errorSummary(request):
 
     # construct string array with days between start_date and end_date
     startdate, enddate = query['modificationtime__range']
-    __errorSummaryPerformance.info("start_date = %s, end_date = %s", startdate, enddate)
+    __errorSummaryPerformance.info("start_date : %s\nend_date : %s\n", startdate, enddate)
     __errorSummaryPerformance.info("RESULTS:\n%s", ''.ljust(17,'-'))
     start_struct, end_struct = time.strptime(startdate, defaultDatetimeFormat), time.strptime(enddate, defaultDatetimeFormat)
     sdate, edate = datetime.utcfromtimestamp(time.mktime(start_struct)), datetime.utcfromtimestamp(time.mktime(end_struct))
