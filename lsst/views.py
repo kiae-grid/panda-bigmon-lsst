@@ -3649,7 +3649,7 @@ def errorSummary(request):
             
             __start = time.time()
             
-            day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
+            day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_list))
         
@@ -3660,7 +3660,7 @@ def errorSummary(request):
                         
             __start = time.time()
             
-            day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
+            day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
         
@@ -3675,7 +3675,7 @@ def errorSummary(request):
             __start = time.time()
             
             for day in dates:
-                jobs_list = list(nosql_jobs.objects.filter(date__eq=day).values_list(*values))
+                jobs_list = list(nosql_jobs.objects.filter(date__eq=day).limit(JOB_LIMIT).values_list(*values))
                 for item in jobs_list:
                     new_item = {}
                     for i in range(0, len(values)):
@@ -3687,12 +3687,12 @@ def errorSummary(request):
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(jobs))
 
     else:
-        
-        __errorSummaryPerformance.info("REQUEST:\n")
-        __errorSummaryPerformance.info(Jobsarchived4.objects.filter(**query).query)
-        __errorSummaryPerformance.info(Jobsdefined4.objects.filter(**query).query)
-        __errorSummaryPerformance.info(Jobsactive4.objects.filter(**query).query)
-        __errorSummaryPerformance.info(Jobswaiting4.objects.filter(**query).query)
+#         
+#         __errorSummaryPerformance.info("REQUEST:\n")
+#         __errorSummaryPerformance.info(Jobsarchived4.objects.filter(**query).query)
+#         __errorSummaryPerformance.info(Jobsdefined4.objects.filter(**query).query)
+#         __errorSummaryPerformance.info(Jobsactive4.objects.filter(**query).query)
+#         __errorSummaryPerformance.info(Jobswaiting4.objects.filter(**query).query)
         
         __start = time.time()
         
@@ -3700,6 +3700,7 @@ def errorSummary(request):
         jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+        jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
         
         __timer_jobs = time.time() - __start
         __errorSummaryPerformance.info("<jobs>".ljust(40," ") + " : %s (number of records = %s)", str(__timer_jobs), len(jobs))
