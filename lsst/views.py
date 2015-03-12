@@ -3624,13 +3624,16 @@ def errorSummary(request):
     # construct string array with days between start_date and end_date
     startdate, enddate = query['modificationtime__range']
     start_struct, end_struct = time.strptime(startdate, defaultDatetimeFormat), time.strptime(enddate, defaultDatetimeFormat)
-    sdate, edate = datetime.utcfromtimestamp(mktime(start_struct)), datetime.utcfromtimestamp(mktime(end_struct))
+    sdate, edate = datetime.utcfromtimestamp(time.mktime(start_struct)), datetime.utcfromtimestamp(time.mktime(end_struct))
     total_days = (edate - sdate).days
     dates = []
     for day_number in range(total_days):
         current_date = (sdate + timedelta(days = day_number))
         dates.append(current_date)
     
+    dates_str = []
+    for item in dates:
+        dates_str.append(item.strftime(defaultDatetimeFormat))
     # get data for Site Errors Summary from Cassandra
     # tables: "day_site_errors", "day_site_errors_30m", "jobs"
     if 'nosql' in requestParams:
@@ -3644,7 +3647,7 @@ def errorSummary(request):
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_list))
             
-            day_site_errors_cql_string = "select computingsite, errcode, diag, pandaid from day_site_errors where date in (%s)", str(dates)
+            day_site_errors_cql_string = "select computingsite, errcode, diag, pandaid from day_site_errors where date in (%s)" % ",".join(date_str)
             __errorSummaryPerformance.info(day_site_errors_cql_string)
         
         elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
@@ -3652,7 +3655,7 @@ def errorSummary(request):
             day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
-            day_site_errors_cnt_30m_cql_string = "select computingsite, errcode, diag, err_count, job_count from day_site_errors_cnt_30m where date in (%s)", str(dates)
+            day_site_errors_cnt_30m_cql_string = "select computingsite, errcode, diag, err_count, job_count from day_site_errors_cnt_30m where date in (%s)" % ",".join(date_str)
             __errorSummaryPerformance.info(day_site_errors_cnt_30m_cql_string)
         
         
