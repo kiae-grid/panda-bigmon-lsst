@@ -3205,7 +3205,7 @@ def errorSummaryDict(request,
         
         # processing query result from SQL database (table jobsarchived)
         if requestParams['chart'] == 'sql':
-            __start = time.time()
+#             __start = time.time()
             
             for job in jobs:
                 for err in errorcodelist:
@@ -3215,9 +3215,9 @@ def errorSummaryDict(request,
                         tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
                         if not tm in errHist: errHist[tm] = 0
                         errHist[tm] += 1
-            
-            __sql_errors_time = time.time() - __start
-            __errorSummaryPerformance.info("chart postprocessing".ljust(40," ") + " : %s", str(__sql_errors_time))
+#             
+#             __sql_errors_time = time.time() - __start
+#             __errorSummaryPerformance.info("chart postprocessing".ljust(40," ") + " : %s", str(__sql_errors_time))
     
     # processing data for Site Errors Summary 
     # using results from SQL table jobsarchived OR 
@@ -3644,7 +3644,7 @@ def errorSummary(request):
         
         if requestParams['nosql'] == 'day_site_errors':
             
-            day_site_errors_cql_string = "REQUEST: select computingsite, errcode, diag, pandaid from day_site_errors where date in ('%s')" % "','".join(date_str)
+            day_site_errors_cql_string = "REQUEST: select computingsite, errcode, diag, pandaid from day_site_errors where date in ('%s')\n" % "','".join(date_str)
             __errorSummaryPerformance.info(day_site_errors_cql_string)
             
             __start = time.time()
@@ -3655,7 +3655,7 @@ def errorSummary(request):
         
         elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
            
-            day_site_errors_cnt_30m_cql_string = "REQUEST: select computingsite, errcode, diag, err_count, job_count from day_site_errors_cnt_30m where date in ('%s')" % "','".join(date_str)
+            day_site_errors_cnt_30m_cql_string = "REQUEST: select computingsite, errcode, diag, err_count, job_count from day_site_errors_cnt_30m where date in ('%s')\n" % "','".join(date_str)
             __errorSummaryPerformance.info(day_site_errors_cnt_30m_cql_string)
                         
             __start = time.time()
@@ -3714,12 +3714,12 @@ def errorSummary(request):
     # from table "day_errors_30m"
     if 'chart' in requestParams:
         if requestParams['chart'] == 'nosql':
-            __start = time.time()
+#             __start = time.time()
             
             day_errors_30m_list = list(day_errors_30m.objects.filter(date__in=dates).values_list('base_mtime', 'count'))
-            
-            __timer_chart = time.time() - __start
-            __errorSummaryPerformance.info("<day_errors_30m>".ljust(40, " ") + " : %s (number of records = %s)", str(__timer_chart), len(day_errors_30m_list))
+#             
+#             __timer_chart = time.time() - __start
+#             __errorSummaryPerformance.info("<day_errors_30m>".ljust(40, " ") + " : %s (number of records = %s)", str(__timer_chart), len(day_errors_30m_list))
     
     ## Build the error summary.
     errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,
