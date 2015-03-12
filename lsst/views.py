@@ -3639,7 +3639,7 @@ def errorSummary(request):
         
         if requestParams['nosql'] == 'day_site_errors':
             
-            day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
+            day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_list))
             
@@ -3648,7 +3648,7 @@ def errorSummary(request):
         
         elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
            
-            day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
+            day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
             day_site_errors_cnt_30m_cql_string = "select computingsite, errcode, diag, err_count, job_count from day_site_errors_cnt_30m where date in (%s)", str(dates)
@@ -3660,7 +3660,7 @@ def errorSummary(request):
             
             new_list = []
             for day in dates:
-                jobs_list = list(nosql_jobs.objects.filter(date__eq=day).values_list(*values))
+                jobs_list = list(nosql_jobs.objects.filter(date__eq=day).limit(JOB_LIMIT).values_list(*values))
                 for item in jobs_list:
                     new_item = {}
                     for i in range(0, len(values)):
@@ -3677,6 +3677,7 @@ def errorSummary(request):
         __start = time.time()
         
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+        jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
         
         __timer_jobs = time.time() - __start
         __errorSummaryPerformance.info("<jobs>".ljust(40," ") + " : %s (number of records = %s)", str(__timer_jobs), len(jobs))
