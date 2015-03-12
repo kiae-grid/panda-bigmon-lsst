@@ -3579,8 +3579,7 @@ def errorSummary(request):
     __errorSummaryPerformance.info("\n%s --- Error Summary Performance Test for %s: \n%s", 
                                datetime.now().__str__(), db_engine, ''.ljust(70,'-'))
     __errorSummaryPerformance.info("Query parameters \n%s\n%s", ''.ljust(17,'-'), query_parameters)
-    __errorSummaryPerformance.info("query = %, %", query['modificationtime__range'])
-    __errorSummaryPerformance.info("RESULTS:\n%s", ''.ljust(17,'-'))
+
     testjobs = False
     if 'prodsourcelabel' in requestParams and requestParams['prodsourcelabel'].lower().find('test') >= 0:
         testjobs = True
@@ -3605,6 +3604,9 @@ def errorSummary(request):
         hours = 12
         limit = 50000
     query = setupView(request, hours=hours, limit=limit)
+    
+    __errorSummaryPerformance.info("query = %, %", query['modificationtime__range'])
+    __errorSummaryPerformance.info("RESULTS:\n%s", ''.ljust(17,'-'))
 
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
 
