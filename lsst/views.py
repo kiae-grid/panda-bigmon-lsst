@@ -3672,7 +3672,7 @@ def errorSummary(request):
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(jobs))
 
             for day in dates:
-                __errorSummaryPerformance.info("select %s from jobs where date = %;\n", *values, day)
+                __errorSummaryPerformance.info("select %s from jobs where date = %s;\n", *values, day)
                 
     else:
         __start = time.time()
