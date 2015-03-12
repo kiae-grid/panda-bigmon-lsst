@@ -3638,31 +3638,40 @@ def errorSummary(request):
     # tables: "day_site_errors", "day_site_errors_30m", "jobs"
     if 'nosql' in requestParams:
         
-        __start = time.time()
         __log_str = ("<" + requestParams['nosql'] + ">").ljust(40, " ") 
         
         if requestParams['nosql'] == 'day_site_errors':
             
+            day_site_errors_cql_string = "REQUEST: select computingsite, errcode, diag, pandaid from day_site_errors where date in ('%s')" % "','".join(date_str)
+            __errorSummaryPerformance.info(day_site_errors_cql_string)
+            
+            __start = time.time()
+            
             day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_list))
-            
-            day_site_errors_cql_string = "select computingsite, errcode, diag, pandaid from day_site_errors where date in (%s)" % ",".join(date_str)
-            __errorSummaryPerformance.info(day_site_errors_cql_string)
         
         elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
            
+            day_site_errors_cnt_30m_cql_string = "REQUEST: select computingsite, errcode, diag, err_count, job_count from day_site_errors_cnt_30m where date in ('%s')" % "','".join(date_str)
+            __errorSummaryPerformance.info(day_site_errors_cnt_30m_cql_string)
+                        
+            __start = time.time()
+            
             day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
-            day_site_errors_cnt_30m_cql_string = "select computingsite, errcode, diag, err_count, job_count from day_site_errors_cnt_30m where date in (%s)" % ",".join(date_str)
-            __errorSummaryPerformance.info(day_site_errors_cnt_30m_cql_string)
-        
         
         elif requestParams['nosql'] == 'jobs':
             # query for each day in array
             
             new_list = []
+            __errorSummaryPerformance.info("REQUEST:\n")
+            for day in date_str:
+                __errorSummaryPerformance.info("select %s from jobs where date = '%s';\n", values, day)
+            
+            __start = time.time()
+            
             for day in dates:
                 jobs_list = list(nosql_jobs.objects.filter(date__eq=day).limit(JOB_LIMIT).values_list(*values))
                 for item in jobs_list:
@@ -3672,12 +3681,15 @@ def errorSummary(request):
                     new_list.append(new_item)
             jobs.extend(new_list)
             
+            
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(jobs))
 
-            for day in dates:
-                __errorSummaryPerformance.info("select %s from jobs where date = %s;\n", values, day)
-                
     else:
+        
+        __errorSummaryPerformance.info("REQUEST:\n")
+        __errorSummaryPerformance.info(str(Jobsarchived4.objects.filter(**query)))
+        __errorSummaryPerformance.info(str(Jobsarchived.objects.filter(**query)))
+        
         __start = time.time()
         
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
