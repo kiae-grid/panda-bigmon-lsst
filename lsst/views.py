@@ -3579,7 +3579,8 @@ def errorSummary(request):
     __errorSummaryPerformance.info("\n%s --- Error Summary Performance Test for %s: \n%s", 
                                datetime.now().__str__(), db_engine, ''.ljust(70,'-'))
     __errorSummaryPerformance.info("Query parameters \n%s\n%s", ''.ljust(17,'-'), query_parameters)
-    __errorSummaryPerformance.info("RESULTS:\n")
+    __errorSummaryPerformance.info("query = %, %", query['modificationtime__range'])
+    __errorSummaryPerformance.info("RESULTS:\n%s", ''.ljust(17,'-'))
     testjobs = False
     if 'prodsourcelabel' in requestParams and requestParams['prodsourcelabel'].lower().find('test') >= 0:
         testjobs = True
@@ -3624,7 +3625,7 @@ def errorSummary(request):
     # construct string array with days between start_date and end_date
     startdate, enddate = query['modificationtime__range']
     start_struct, end_struct = time.strptime(startdate, defaultDatetimeFormat), time.strptime(enddate, defaultDatetimeFormat)
-    sdate, edate = datetime.utcfromtimestamp(mktime(start_struct)), datetime.utcfromtimestamp(mktime(end_struct))
+    sdate, edate = datetime.utcfromtimestamp(time.mktime(start_struct)), datetime.utcfromtimestamp(time.mktime(end_struct))
     total_days = (edate - sdate).days
     dates = []
     for day_number in range(total_days):
@@ -3687,10 +3688,10 @@ def errorSummary(request):
     else:
         
         __errorSummaryPerformance.info("REQUEST:\n")
-        __errorSummaryPerformance.info(str(Jobsarchived4.objects.filter(**query)))
-        __errorSummaryPerformance.info(str(Jobsdefined4.objects.filter(**query)))
-        __errorSummaryPerformance.info(str(Jobsactive4.objects.filter(**query)))
-        __errorSummaryPerformance.info(str(Jobswaiting4.objects.filter(**query)))
+        __errorSummaryPerformance.info(Jobsarchived4.objects.filter(**query).query)
+        __errorSummaryPerformance.info(Jobsdefined4.objects.filter(**query).query)
+        __errorSummaryPerformance.info(Jobsactive4.objects.filter(**query).query)
+        __errorSummaryPerformance.info(Jobswaiting4.objects.filter(**query).query)
         
         __start = time.time()
         
