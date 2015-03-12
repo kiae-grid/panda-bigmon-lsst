@@ -3624,16 +3624,16 @@ def errorSummary(request):
     # construct string array with days between start_date and end_date
     startdate, enddate = query['modificationtime__range']
     start_struct, end_struct = time.strptime(startdate, defaultDatetimeFormat), time.strptime(enddate, defaultDatetimeFormat)
-    sdate, edate = datetime.utcfromtimestamp(time.mktime(start_struct)), datetime.utcfromtimestamp(time.mktime(end_struct))
+    sdate, edate = datetime.utcfromtimestamp(mktime(start_struct)), datetime.utcfromtimestamp(mktime(end_struct))
     total_days = (edate - sdate).days
     dates = []
     for day_number in range(total_days):
         current_date = (sdate + timedelta(days = day_number))
         dates.append(current_date)
     
-    dates_str = []
+    date_str = []
     for item in dates:
-        dates_str.append(item.strftime(defaultDatetimeFormat))
+        date_str.append(item.strftime(defaultDatetimeFormat))
     # get data for Site Errors Summary from Cassandra
     # tables: "day_site_errors", "day_site_errors_30m", "jobs"
     if 'nosql' in requestParams:
