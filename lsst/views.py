@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import time
 import json
 
-from django.http import HttpResponse
+from django.http import HttpResponse, QueryDict
 from django.shortcuts import render_to_response, render, redirect
 from django.template import RequestContext, loader
 from django.db.models import Count
@@ -84,7 +84,9 @@ errorcodelist = [
     ]
 
 
+
 _logger = logging.getLogger('bigpandamon')
+_perfmon_logger = logging.getLogger('perfmon')
 viewParams = {}
 requestParams = {}
 
@@ -3162,6 +3164,7 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
     errHist = {}
     flist = [ 'cloud', 'computingsite', 'produsername', 'taskid', 'jeditaskid', 'processingtype', 'prodsourcelabel', 'transformation', 'workinggroup', 'specialhandling', 'jobstatus' ]
 
+    _start = time.time()
     for job in jobs:
         if not testjobs:
             if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
@@ -3277,6 +3280,9 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
                     errsByTask[taskid]['toterrors'] += 1
         if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
         if taskid in errsByTask: errsByTask[taskid]['toterrjobs'] += 1
+    _sql_time = time.time() - _start
+    _perfmon_logger.info("SQL <jobs> postprocessing".ljust(40," ") + " : %s", _sql_time)
+
 
                 
     ## reorganize as sorted lists
@@ -3367,6 +3373,13 @@ def errorSummary(request):
     valid, response = initRequest(request)
     if not valid: return response
 
+    qp = "\n".join(map(lambda (k, v): "%-20s: %s" % (k, repr(v)),
+      QueryDict(request.META['QUERY_STRING']).iterlists()))
+    _perfmon_logger.info("\n%s --- Error Summary Performance Test for %s: \n%s",
+      datetime.now(), dbaccess.get('default').get('ENGINE'), '-'*70)
+    _perfmon_logger.info("Query parameters\n%s\n%s", '-'*17, qp)
+
+
     testjobs = False
     if 'prodsourcelabel' in requestParams and requestParams['prodsourcelabel'].lower().find('test') >= 0:
         testjobs = True
@@ -3396,11 +3409,14 @@ def errorSummary(request):
 
     jobs = []
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
+    _start = time.time()
     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    _perfmon_logger.info("SQL <jobs>".ljust(40," ") + \
+      " : %s (number of records = %d)", time.time() - _start, len(jobs))
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
 
