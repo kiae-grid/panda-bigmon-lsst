@@ -3164,13 +3164,30 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
     errHist = {}
     flist = [ 'cloud', 'computingsite', 'produsername', 'taskid', 'jeditaskid', 'processingtype', 'prodsourcelabel', 'transformation', 'workinggroup', 'specialhandling', 'jobstatus' ]
 
-    _start = time.time()
+    # Build list of all error jobs that match our filters
+    errJobs = []
     for job in jobs:
         if not testjobs:
             if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
         site = job['computingsite']
         if 'cloud' in requestParams:
             if site in homeCloud and homeCloud[site] != requestParams['cloud']: continue
+        errJobs.append(job)
+
+    ## Build histogram for number of errors versus time
+    _start = time.time()
+    for job in errJobs:
+        tm = job['modificationtime']
+        tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
+        if not tm in errHist: errHist[tm] = 0
+        errHist[tm] += 1
+    _sql_time = time.time() - _start
+    _perfmon_logger.info("SQL <jobs> error timeline histogram".ljust(40," ") + " : %s", _sql_time)
+
+    ## Build summary table
+    _start = time.time()
+    for job in errJobs:
+        site = job['computingsite']
         user = job['produsername']
         taskname = ''
         if job['jeditaskid'] > 0:
@@ -3183,10 +3200,6 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
             if taskid in tasknamedict:
                 taskname = tasknamedict[taskid]
             tasktype = 'taskid'
-        tm = job['modificationtime']
-        tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
-        if not tm in errHist: errHist[tm] = 0
-        errHist[tm] += 1
 
         ## Overall summary
         for f in flist:
