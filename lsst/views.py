@@ -3650,7 +3650,7 @@ def errorSummary(request):
             
             __start = time.time()
             
-            day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
+            day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).limit(1000000).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_list))
         
@@ -3661,7 +3661,7 @@ def errorSummary(request):
                         
             __start = time.time()
             
-            day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
+            day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).limit(1000000).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
         
