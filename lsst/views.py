@@ -3208,13 +3208,13 @@ def errorSummaryDict(request,
 #             __start = time.time()
             
             for job in jobs:
-                for err in errorcodelist:
-                    if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
-                         
-                        tm = job['modificationtime']
-                        tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
-                        if not tm in errHist: errHist[tm] = 0
-                        errHist[tm] += 1
+                if job['jobstatus'] in [ 'failed', 'holding' ]: 
+#                 for err in errorcodelist:
+#                     if job[err['error']] != 0 and  job[err['error']] != '' and job[err['error']] != None:
+                    tm = job['modificationtime']
+                    tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
+                    if not tm in errHist: errHist[tm] = 0
+                    errHist[tm] += 1
 #             
 #             __sql_errors_time = time.time() - __start
 #             __errorSummaryPerformance.info("chart postprocessing".ljust(40," ") + " : %s", str(__sql_errors_time))
@@ -3649,7 +3649,7 @@ def errorSummary(request):
             
             __start = time.time()
             
-            day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
+            day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_list))
         
@@ -3660,7 +3660,7 @@ def errorSummary(request):
                         
             __start = time.time()
             
-            day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
+            day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
             __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
         
@@ -3675,7 +3675,7 @@ def errorSummary(request):
             __start = time.time()
             
             for day in dates:
-                jobs_list = list(nosql_jobs.objects.filter(date__eq=day).limit(JOB_LIMIT).values_list(*values))
+                jobs_list = list(nosql_jobs.objects.filter(date__eq=day).values_list(*values))
                 for item in jobs_list:
                     new_item = {}
                     for i in range(0, len(values)):
