@@ -3697,11 +3697,11 @@ def errorSummary(request):
         
         __start = time.time()
         
-        jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-        jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-        jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-        jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-        jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
+#         jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+#         jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+#         jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+        jobs.extend(Jobsarchived4.objects.filter(**query)[1000000].values(*values))
+        jobs.extend(Jobsarchived.objects.filter(**query)[1000000].values(*values))
         
         __timer_jobs = time.time() - __start
         __errorSummaryPerformance.info("<jobs>".ljust(40," ") + " : %s (number of records = %s)", str(__timer_jobs), len(jobs))
