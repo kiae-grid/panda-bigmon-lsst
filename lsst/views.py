@@ -3586,24 +3586,24 @@ def errorSummary(request):
         testjobs = True
 
     jobtype = ''
-    if 'jobtype' in requestParams:
-        jobtype = requestParams['jobtype']
-    elif '/analysis' in request.path:
-        jobtype = 'analysis'
-    elif '/production' in request.path:
-        jobtype = 'production'
-    elif testjobs:
-        jobtype = 'rc_test'
-
-    if jobtype == '':
-        hours = 3
-        limit = 50000
-    elif jobtype.startswith('anal'):
-        hours = 6
-        limit = 50000
-    else:
-        hours = 12
-        limit = 50000
+#     if 'jobtype' in requestParams:
+#         jobtype = requestParams['jobtype']
+#     elif '/analysis' in request.path:
+#         jobtype = 'analysis'
+#     elif '/production' in request.path:
+#         jobtype = 'production'
+#     elif testjobs:
+#         jobtype = 'rc_test'
+# 
+#     if jobtype == '':
+#         hours = 3
+#         limit = 50000
+#     elif jobtype.startswith('anal'):
+#         hours = 6
+#         limit = 50000
+#     else:
+#         hours = 12
+#         limit = 50000
     query = setupView(request, hours=hours, limit=limit)
     
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
@@ -3652,7 +3652,7 @@ def errorSummary(request):
             
             day_site_errors_list = list(day_site_errors.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'pandaid'))
             
-            __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_list))
+            __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s with limit %s)", str(time.time() - __start), len(day_site_errors_list), JOB_LIMIT)
         
         elif requestParams['nosql'] == 'day_site_errors_cnt_30m':
            
@@ -3663,7 +3663,7 @@ def errorSummary(request):
             
             day_site_errors_cnt_30m_list = list(day_site_errors_cnt_30m.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list('computingsite', 'errcode', 'diag', 'err_count', 'job_count'))
             
-            __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s)", str(time.time() - __start), len(day_site_errors_cnt_30m_list))                    
+            __errorSummaryPerformance.info(__log_str + " : %s (number of records = %s with limit %s)", str(time.time() - __start), len(day_site_errors_cnt_30m_list), JOB_LIMIT)                    
         
         elif requestParams['nosql'] == 'jobs':
             # query for each day in array
