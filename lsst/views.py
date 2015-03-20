@@ -3425,6 +3425,7 @@ def errorSummaryDict(request,
                 errsBySite[site]['pandaids'].append(pandaid)
             
             for key, value in errsBySite.iteritems():
+                __errorSummaryPerformance.info(key)
                 jobs = list(set(value['pandaids']))
                 value['toterrjobs'] = len(jobs)
                 
