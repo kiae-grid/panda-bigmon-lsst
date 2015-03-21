@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 import time
 import json
 
+import hashlib
+
 from django.http import HttpResponse, QueryDict
 from django.shortcuts import render_to_response, render, redirect
 from django.template import RequestContext, loader
@@ -41,7 +43,10 @@ from core.common.models import JediWorkQueue
 from core.common.models import RequestStat
 from core.common.settings.config import ENV
 
-from settings.local import dbaccess
+from lsst.timer import ProfilingTimer
+from lsst.time_profilers import TimeProfiler
+
+from settings.local import dbaccess, LOG_ROOT
 import ErrorCodes
 errorFields = []
 errorCodes = {}
@@ -89,6 +94,12 @@ _logger = logging.getLogger('bigpandamon')
 _perfmon_logger = logging.getLogger('perfmon')
 viewParams = {}
 requestParams = {}
+
+# XXX: I don't like this, should rewrite at some point.  --rea
+_time_profiler = None
+_t_jobs = None
+_t_hist = None
+_t_summary = None
 
 LAST_N_HOURS_MAX = 0
 JOB_LIMIT = 0
@@ -3155,6 +3166,7 @@ def jobStateSummary(jobs):
 
 def errorSummaryDict(request,jobs, tasknamedict, testjobs):
     """ take a job list and produce error summaries from it """
+    global _t_hist, _t_summary
     errsByCount = {}
     errsBySite = {}
     errsByUser = {}
@@ -3175,17 +3187,17 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
         errJobs.append(job)
 
     ## Build histogram for number of errors versus time
-    _start = time.time()
+    _t_hist.start()
     for job in errJobs:
         tm = job['modificationtime']
         tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
         if not tm in errHist: errHist[tm] = 0
         errHist[tm] += 1
-    _sql_time = time.time() - _start
-    _perfmon_logger.info("SQL <jobs> error timeline histogram".ljust(40," ") + " : %s", _sql_time)
+    _t_hist.stop()
+    _perfmon_logger.info("SQL <jobs> error timeline histogram".ljust(40," ") + " : %s", _t_hist.get_elapsed())
 
     ## Build summary table
-    _start = time.time()
+    _t_summary.start()
     for job in errJobs:
         site = job['computingsite']
         user = job['produsername']
@@ -3293,8 +3305,8 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
                     errsByTask[taskid]['toterrors'] += 1
         if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
         if taskid in errsByTask: errsByTask[taskid]['toterrjobs'] += 1
-    _sql_time = time.time() - _start
-    _perfmon_logger.info("SQL <jobs> postprocessing".ljust(40," ") + " : %s", _sql_time)
+    _t_summary.stop()
+    _perfmon_logger.info("SQL <jobs> postprocessing".ljust(40," ") + " : %s", _t_summary.get_elapsed())
 
 
                 
@@ -3382,9 +3394,107 @@ def getTaskName(tasktype,taskid):
             taskname = tasks[0]['taskname']
     return taskname
 
+
+def __flattenQueryDict(qd):
+    """
+    Flattens and sorts query dictionary (django.http.QueryDict).
+
+    Returns array of (name, value) pairs that correspond
+    to our query.  There can be multiple entries with the
+    same name.  Names will be ordered lexicographically.
+    """
+
+    retval = []
+    items = qd.iterlists()
+    for (k, v) in items:
+        for i in v:
+            retval.append((k, i))
+
+    def __comparator(x, y):
+        """ Comparator for two-key sorting """
+        idx = 0
+        if x[idx] == y[idx]:
+            idx = 1
+        return cmp(x[idx], y[idx])
+
+    return sorted(retval, cmp = __comparator)
+
+
+def __makeTimeProfilerConf(view, generation, request, suffix):
+    """
+    Creates configuration for request time profiler.
+
+    Arguments:
+
+     - view: name of the view;
+
+     - generation: view metadata generation; used to distinguish
+       profilers with different set of timers.  You must bump
+       your generation each time you add new timers or change
+       processing type for timers;
+
+     - request: HTTP request object;
+
+     - suffix: filename suffix.
+
+    Return value is a tuple of (filename, metadata) where
+
+     - filename is the full path to the output file under
+       LOG_ROOT that corresponds to the current request;
+       we will make different files for different views,
+       generations and request parameters to allow profiling
+       results for different requests to go into separate files;
+
+     - metadata will contain human-readable description
+       of view, generation and request parameters.
+    """
+
+    global LOG_ROOT
+
+    max_name_len = os.pathconf("/", 'PC_NAME_MAX')
+
+    name_components = []
+    name_components.append(("view", view))
+    name_components.append(("gen", generation))
+    qd = QueryDict(request.META['QUERY_STRING'])
+    name_components.extend(__flattenQueryDict(qd))
+
+    metadata = "\n".join(map(lambda (k, v): "%s: %s" % (k, v),
+      name_components))
+
+    filename = ",".join(map(lambda (k, v): "%s:%s" % (k, v),
+      name_components)).replace(os.path.sep, "-")
+    if len(filename + suffix) > max_name_len:
+        digest = hashlib.sha1(filename).hexdigest()
+        to_leave = max_name_len - (len(digest) + 1) - len(suffix)
+        if to_leave < 0:
+            raise RuntimeError("Can't make unique log file name with "\
+              "maximal filename length of %d, digest '%s' and suffix '%s'" % \
+              (max_name_len, digest, suffix))
+        filename = "%s-%s" % (filename[0:to_leave], digest)
+
+    return (os.path.join(LOG_ROOT, filename + suffix), metadata)
+
+
 def errorSummary(request):
+    global _time_profiler, _t_jobs, _t_hist, _t_summary
+
+    # NB: bump this every time you add a new profiling timer
+    metadata_gen = "1"
+
     valid, response = initRequest(request)
     if not valid: return response
+
+    (_tp_file, _tp_metadata) = \
+      __makeTimeProfilerConf("errors", metadata_gen, request, ".csv")
+    _time_profiler = TimeProfiler(_tp_file, _tp_metadata)
+    _time_profiler.set_formatter("csv")
+    _t_jobs = ProfilingTimer("jobs_sql")
+    _time_profiler.add(_t_jobs)
+    _t_hist = ProfilingTimer("histogram_sql")
+    _time_profiler.add(_t_hist)
+    _t_summary = ProfilingTimer("summary_table_sql")
+    _time_profiler.add(_t_summary)
 
     qp = "\n".join(map(lambda (k, v): "%-20s: %s" % (k, repr(v)),
       QueryDict(request.META['QUERY_STRING']).iterlists()))
@@ -3422,14 +3532,15 @@ def errorSummary(request):
 
     jobs = []
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
-    _start = time.time()
+    _t_jobs.start()
     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    _t_jobs.stop()
     _perfmon_logger.info("SQL <jobs>".ljust(40," ") + \
-      " : %s (number of records = %d)", time.time() - _start, len(jobs))
+      " : %s (number of records = %d)", _t_jobs.get_elapsed(), len(jobs))
     jobs = cleanJobList(jobs, mode='nodrop')
     njobs = len(jobs)
 
@@ -3488,6 +3599,8 @@ def errorSummary(request):
         sortby = 'alpha'
 
     flowstruct = buildGoogleFlowDiagram(jobs=jobs)
+
+    _time_profiler.dump()
 
     request.session['max_age_minutes'] = 6
     if request.META.get('CONTENT_TYPE', 'text/plain') == 'text/plain':
