@@ -3586,15 +3586,15 @@ def errorSummary(request):
         testjobs = True
 
     jobtype = ''
-#     if 'jobtype' in requestParams:
-#         jobtype = requestParams['jobtype']
-#     elif '/analysis' in request.path:
-#         jobtype = 'analysis'
-#     elif '/production' in request.path:
-#         jobtype = 'production'
-#     elif testjobs:
-#         jobtype = 'rc_test'
-# 
+    if 'jobtype' in requestParams:
+        jobtype = requestParams['jobtype']
+    elif '/analysis' in request.path:
+        jobtype = 'analysis'
+    elif '/production' in request.path:
+        jobtype = 'production'
+    elif testjobs:
+        jobtype = 'rc_test'
+ 
 #     if jobtype == '':
 #         hours = 3
 #         limit = 50000
@@ -3604,6 +3604,14 @@ def errorSummary(request):
 #     else:
 #         hours = 12
 #         limit = 50000
+    if 'hours' in requestParams:
+        hours = int(requestParams['hours'])
+    else:
+        hours = 12
+    if 'limit' in requestParams:
+        limit = requestParams['limit']
+    else:
+        limit = 50000 
     query = setupView(request, hours=hours, limit=limit)
     
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
