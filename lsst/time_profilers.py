@@ -46,6 +46,7 @@ class TimeProfiler(object):
         """
 
         self.timers = []
+        self.timer_information = []
         self.filename = filename
         self.comment = comment
         self.set_formatter("plaintext")
@@ -214,9 +215,21 @@ class TimeProfiler(object):
               (formatter_type))
 
 
-    def add(self, timer):
-        """ Adds timer to the list of timers we tame and milk """
+    def add(self, timer, info = None):
+        """
+        Adds timer to the list of timers we tame and milk
+
+        Arguments:
+
+         - timer: timer instance;
+
+         - info: potentially long description that enables
+           people to understand more about the purpose of
+           this timer.
+        """
+
         self.timers.append(timer)
+        self.timer_information.append(info)
 
 
     def dump(self):
@@ -231,7 +244,16 @@ class TimeProfiler(object):
             try:
                 statinfo = os.fstat(fp.fileno())
                 if statinfo.st_size == 0:
-                    self.hdr_formatter(fp, self.comment, t_names)
+                    timer_nfo = "\n".join(map(lambda x: "  %s: %s" % (x[0], x[1]),
+                      zip(t_names, self.timer_information)))
+                    if len(timer_nfo):
+                        timer_nfo = """
+
+Timer information:
+""" + timer_nfo
+                    self.hdr_formatter(fp, self.comment + timer_nfo,
+                      t_names)
+
                 self.formatter(fp, t_tuples)
             finally:
                 fcntl.lockf(fp, fcntl.LOCK_UN)
