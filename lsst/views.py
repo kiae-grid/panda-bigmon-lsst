@@ -48,6 +48,7 @@ from lsst.time_profilers import TimeProfiler
 
 from settings.local import dbaccess, LOG_ROOT
 import ErrorCodes
+
 errorFields = []
 errorCodes = {}
 errorStages = {}
@@ -114,6 +115,48 @@ standard_taskfields = [ 'tasktype', 'superstatus', 'corecount', 'taskpriority', 
 VOLIST = [ 'atlas', 'bigpanda', 'htcondor', 'lsst', ]
 VONAME = { 'atlas' : 'ATLAS', 'bigpanda' : 'BigPanDA', 'htcondor' : 'HTCondor', 'lsst' : 'LSST', '' : '' }
 VOMODE = ' '
+
+def __makeDateRange(start, stop, out_fmt):
+    """
+    Creates iterable that will yield all dates in a given range.
+
+    Arguments:
+     - start, stop: first and last dates;
+     - out_fmt: format string for strftime to which we will
+       transform each date from the provided range.
+    """
+
+    retval = []
+
+    in_fmt = defaultDatetimeFormat
+    f = lambda x: datetime.utcfromtimestamp(time.mktime(time.strptime(x, in_fmt)))
+    d1 = f(start)
+    d2 = f(stop)
+    day = timedelta(days = 1)
+    for i in xrange((d2 - d1).days):
+        retval.append(d1.date() + i * day)
+
+    return retval
+
+
+def __errorcodelist2nameDict(code_list):
+    """
+    Makes error name to error class mapping dict.
+
+    Used for NoSQL processing that needs deduce error class
+    from given error name to avoid excessive lookups inside
+    errorcodelist for each processed entry.
+
+    Arguments:
+     - code_list: errorcodelist-like hash; errorcodelist itself is
+       defined somewhere at the top of this module.
+
+    Returns dict that is keyed by error name ('name' inside errorcodelist)
+    and valued by error class ('error' inside errorcodelist).
+    """
+
+    return dict(map(lambda ecl: (ecl['name'], ecl['error']), code_list))
+
 
 def setupSiteInfo():
     global homeCloud, objectStores, pandaSites, callCount
@@ -3163,11 +3206,23 @@ def jobStateSummary(jobs):
         statecount[job['jobstatus']] += 1
     return statecount
 
-def errorSummaryDict(request,jobs, tasknamedict, testjobs):
-    """ take a job list and produce error summaries from it """
+
+def errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, ehList):
+    """
+    Take a job list and produce error summaries from it.
+
+    Arguments:
+     - request: HTTP request
+     - jobs: job array obtained from database
+     - tasknamedict: hash with task name mapping
+     - testjobs: boolean flag indicating if caller wants
+       us to process all jobs (True) or only errorred ones
+     - errsBySite: hash that holds already filled parts of
+       by-site errors (that may come from NoSQL)
+     - ehList: error histogram as a list of (bin, value) tuples.
+    """
     global _t_hist, _t_summary
     errsByCount = {}
-    errsBySite = {}
     errsByUser = {}
     errsByTask = {}
     sumd = {}
@@ -3187,6 +3242,10 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
 
     ## Build histogram for number of errors versus time
     _t_hist.start()
+    # We may have the part of the histogram already available.
+    # Absorb its values.
+    if ehList:
+        errHist = dict(ehList)
     for job in errJobs:
         tm = job['modificationtime']
         tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
@@ -3381,6 +3440,105 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
 
     return errsByCountL, errsBySiteL, errsByUserL, errsByTaskL, suml, errHistL
 
+
+def __nosqlDaySiteErrors(error_list):
+    """
+    Builds error list via day_site_errors-like NoSQL table
+
+    Arguments:
+     - error_list: list with NoSQL query results
+
+    Returns errsBySite-like hash that can be used inside
+    errorSummaryDict().
+
+    NB: sync field list with variable nosql_summary_processors
+    from errorSummary().
+    """
+
+    errsBySite = {}
+    sitePandaIDs = {}
+    ecl_map = __errorcodelist2nameDict(errorcodelist)
+    not_an_error = frozenset((0, '0', None))
+
+    for site, errcode, diag, pandaid in error_list:
+        errname, errnum = errcode.split(":")
+        if errnum in not_an_error:
+            continue
+
+        if site not in errsBySite:
+            errsBySite[site] = {
+              'name':		site,
+              'errors':		{},
+              'toterrors':	0,
+              'toterrjobs':	0,
+            }
+            sitePandaIDs[site] = []
+        if errcode not in errsBySite[site]['errors']:
+            errsBySite[site]['errors'][errcode] = {
+              'error':		errcode,
+              'codename':	ecl_map[errname],
+              'codeval':	errnum,
+              'diag':		diag,
+              'count':		0,
+            }
+
+        errsBySite[site]['errors'][errcode]['count'] += 1
+        errsBySite[site]['toterrors'] += 1
+        sitePandaIDs[site].append(pandaid)
+
+    # Count unique errorred jobs
+    for site,ebs in errsBySite.iteritems():
+        ebs['toterrjobs'] = len(set(sitePandaIDs[site]))
+
+    return errsBySite
+
+
+def __nosqlDaySiteErrorsCnt(error_list):
+    """
+    Builds error list via day_site_errors_cnt_30m-like NoSQL table
+
+    Arguments:
+     - error_list: list with NoSQL query results
+
+    Returns errsBySite-like hash that can be used inside
+    errorSummaryDict().
+
+    NB: sync field list with variable nosql_summary_processors
+    from errorSummary().
+    """
+
+    errsBySite = {}
+    ecl_map = __errorcodelist2nameDict(errorcodelist)
+    not_an_error = frozenset((0, '0', None))
+
+    for site, errcode, diag, err_count, job_count in error_list:
+        errname, errnum = errcode.split(":")
+        if errnum in not_an_error:
+            continue
+
+        if site not in errsBySite:
+            errsBySite[site] = {
+              'name':		site,
+              'errors':		{},
+              'toterrors':	0,
+              'toterrjobs':	0,
+            }
+        if errcode not in errsBySite[site]['errors']:
+            errsBySite[site]['errors'][errcode] = {
+              'error':		errcode,
+              'codename':	ecl_map[errname],
+              'codeval':	errnum,
+              'diag':		diag,
+              'count':		0,
+            }
+
+        errsBySite[site]['errors'][errcode]['count'] += err_count
+        errsBySite[site]['toterrors'] += err_count
+        errsBySite[site]['toterrjobs'] += job_count
+
+    return errsBySite
+
+
 def getTaskName(tasktype,taskid):
     taskname = ''
     if tasktype == 'taskid':
@@ -3475,9 +3633,10 @@ def __makeTimeProfilerConf(view, generation, request, suffix):
 
 def errorSummary(request):
     global _time_profiler, _t_jobs, _t_hist, _t_summary
+    global dbaccess
 
     # NB: bump this every time you add a new profiling timer
-    metadata_gen = "2"
+    metadata_gen = "3"
 
     valid, response = initRequest(request)
     if not valid: return response
@@ -3488,15 +3647,17 @@ def errorSummary(request):
     _time_profiler.set_formatter("csv")
     _t_total = ProfilingTimer("total_time")
     _time_profiler.add(_t_total, info = "walltime for errorSummary()")
-    _t_jobs = ProfilingTimer("jobs_sql")
+    _t_jobs = ProfilingTimer("jobs_DBquery")
     _time_profiler.add(_t_jobs, info = "job selection from DB")
-    _t_hist = ProfilingTimer("histogram_sql")
+    _t_archived_jobs = ProfilingTimer("archived_jobs_DBquery")
+    _time_profiler.add(_t_archived_jobs, info = "archived job selection from DB")
+    _t_hist = ProfilingTimer("histogram_DBquery")
     _time_profiler.add(_t_hist, info = "creation of error count timeline histogram")
-    _t_jedi_tasks = ProfilingTimer("jedi_tasks_sql")
+    _t_jedi_tasks = ProfilingTimer("jedi_tasks_DBquery")
     _time_profiler.add(_t_jedi_tasks, info = "query for JEDI_TASKS table via taskNameDict()")
     _t_job_cleaner = ProfilingTimer("job_cleaner")
     _time_profiler.add(_t_job_cleaner, info = "job cleaning via cleanJobList()")
-    _t_summary = ProfilingTimer("summary_table_sql")
+    _t_summary = ProfilingTimer("summary_table_DBquery")
     _time_profiler.add(_t_summary, info = "creation of summary table")
     _t_error_summary_processing = ProfilingTimer("processing: error summary")
     _time_profiler.add(_t_error_summary_processing, info = "walltime for errorSummaryDict()")
@@ -3507,6 +3668,32 @@ def errorSummary(request):
 
 
     _t_total.start()
+
+    nosql = 'nosql' in requestParams
+    if nosql:
+        nosql_type = requestParams['nosql']
+        from core.pandajob.cassandra_models import day_site_errors, day_errors_30m, day_site_errors_cnt_30m
+        from core.pandajob.cassandra_models import jobs as nosql_jobs
+        from lsst.cassandra_helpers import connectToCassandra, cqlValuesDict
+
+        connectToCassandra(dbaccess)
+
+        nosql_summary_processors = {
+          'day_site_errors': {
+            'model': day_site_errors,
+            'handler': __nosqlDaySiteErrors,
+            'fields': [
+              'computingsite', 'errcode', 'diag', 'pandaid'
+            ],
+          },
+          'day_site_errors_cnt_30m': {
+            'model': day_site_errors_cnt_30m,
+            'handler': __nosqlDaySiteErrorsCnt,
+            'fields': [
+              'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
+            ],
+          },
+        }
 
     testjobs = False
     if 'prodsourcelabel' in requestParams and requestParams['prodsourcelabel'].lower().find('test') >= 0:
@@ -3533,17 +3720,49 @@ def errorSummary(request):
         limit = 50000
     query = setupView(request, hours=hours, limit=limit)
 
+    dates = None
+    if nosql:
+        (start, stop) = query['modificationtime__range']
+        dates = __makeDateRange(start, stop, '%Y-%m-%d')
+
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
 
     jobs = []
+    errHist = None
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
     _t_jobs.start()
     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-    jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-    jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    _t_archived_jobs.start()
+    if nosql:
+        # Get data for job summaries
+        if nosql_type == 'jobs':
+            nosql_jobs = []
+            for date in dates:
+                query = nosql_jobs.objects.filter(date=date).limit(JOB_LIMIT)
+                nosql_jobs.extend(cqlValuesDict(values, query))
+                if len(nosql_jobs) >= JOB_LIMIT:
+                    nosql_jobs = nosql_jobs[:JOB_LIMIT]
+                    break
+            jobs.extend(nosql_jobs)
+        elif nosql_type in nosql_summary_processors.keys():
+            processor = nosql_summary_processors[nosql_type]
+            fields = processor['fields']
+            model = processor['model']
+            nosql_error_list = \
+              list(model.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list(*fields))
+        else:
+            raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
+
+        # Get data for histogram
+        errHist = list(day_errors_30m.objects.filter(date__in=dates).values_list('base_mtime', 'count'))
+    else:
+        jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+        jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    _t_archived_jobs.stop()
     _t_jobs.stop()
+
     _t_job_cleaner.start()
     jobs = cleanJobList(jobs, mode='nodrop')
     _t_job_cleaner.stop()
@@ -3554,8 +3773,14 @@ def errorSummary(request):
     _t_jedi_tasks.stop()
 
     ## Build the error summary.
+    # TODO: sumd!
     _t_error_summary_processing.start()
-    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs)
+    errsBySite = {}
+    if nosql and nosql_type in nosql_summary_processors.keys():
+        handler = nosql_summary_processors[nosql_type]['handler']
+        errsBySite = handler(nosql_error_list)
+    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = \
+      errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, errHist)
     _t_error_summary_processing.stop()
 
     _t_state_summary_processing.start()
