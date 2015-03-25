@@ -3480,7 +3480,7 @@ def errorSummary(request):
     global _time_profiler, _t_jobs, _t_hist, _t_summary
 
     # NB: bump this every time you add a new profiling timer
-    metadata_gen = "1"
+    metadata_gen = "2"
 
     valid, response = initRequest(request)
     if not valid: return response
@@ -3489,12 +3489,26 @@ def errorSummary(request):
       __makeTimeProfilerConf("errors", metadata_gen, request, ".csv")
     _time_profiler = TimeProfiler(_tp_file, _tp_metadata)
     _time_profiler.set_formatter("csv")
+    _t_total = ProfilingTimer("total_time")
+    _time_profiler.add(_t_total)
     _t_jobs = ProfilingTimer("jobs_sql")
     _time_profiler.add(_t_jobs)
     _t_hist = ProfilingTimer("histogram_sql")
     _time_profiler.add(_t_hist)
+    _t_jedi_tasks = ProfilingTimer("jedi_tasks_sql")
+    _time_profiler.add(_t_jedi_tasks)
+    _t_job_cleaner = ProfilingTimer("job_cleaner")
+    _time_profiler.add(_t_job_cleaner)
     _t_summary = ProfilingTimer("summary_table_sql")
     _time_profiler.add(_t_summary)
+    _t_error_summary_processing = ProfilingTimer("processing: error summary")
+    _time_profiler.add(_t_error_summary_processing)
+    _t_state_summary_processing = ProfilingTimer("processing: state summary")
+    _time_profiler.add(_t_state_summary_processing)
+    _t_google_flow = ProfilingTimer("processing: GoogleFlow diagram")
+    _time_profiler.add(_t_google_flow)
+
+    _t_total.start()
 
     qp = "\n".join(map(lambda (k, v): "%-20s: %s" % (k, repr(v)),
       QueryDict(request.META['QUERY_STRING']).iterlists()))
@@ -3541,14 +3555,21 @@ def errorSummary(request):
     _t_jobs.stop()
     _perfmon_logger.info("SQL <jobs>".ljust(40," ") + \
       " : %s (number of records = %d)", _t_jobs.get_elapsed(), len(jobs))
+    _t_job_cleaner.start()
     jobs = cleanJobList(jobs, mode='nodrop')
+    _t_job_cleaner.stop()
     njobs = len(jobs)
 
+    _t_jedi_tasks.start()
     tasknamedict = taskNameDict(jobs)
+    _t_jedi_tasks.stop()
 
     ## Build the error summary.
+    _t_error_summary_processing.start()
     errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = errorSummaryDict(request,jobs, tasknamedict, testjobs)
+    _t_error_summary_processing.stop()
 
+    _t_state_summary_processing.start()
     ## Build the state summary and add state info to site error summary
     #notime = True
     #if testjobs: notime = False
@@ -3592,14 +3613,18 @@ def errorSummary(request):
 
         if 'jeditaskid' in requestParams:
             taskname = getTaskName('jeditaskid',requestParams['jeditaskid'])
+    _t_state_summary_processing.stop()
 
     if 'sortby' in requestParams:
         sortby = requestParams['sortby']
     else:
         sortby = 'alpha'
 
+    _t_google_flow.start()
     flowstruct = buildGoogleFlowDiagram(jobs=jobs)
+    _t_google_flow.stop()
 
+    _t_total.stop()
     _time_profiler.dump()
 
     request.session['max_age_minutes'] = 6
