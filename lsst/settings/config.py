@@ -138,14 +138,6 @@ LOGGING = {
             'level':'DEBUG',
             'class':'django.utils.log.NullHandler',
         },
-        'logfile-perfmon': {
-            'level':'INFO',
-            'class':'logging.handlers.RotatingFileHandler',
-            'filename': LOG_ROOT + "/logfile.perfmon",
-            'maxBytes': LOG_SIZE,
-            'backupCount': 2,
-            'formatter': 'verbose',
-        },
         'logfile-bigpandamon': {
             'level':'DEBUG',
             'class':'logging.handlers.RotatingFileHandler',
@@ -230,10 +222,6 @@ LOGGING = {
             'handlers':['logfile-rest'],
             'propagate': True,
             'level':'DEBUG',
-        },
-        'perfmon': {
-            'handlers': ['logfile-perfmon'],
-            'level': 'INFO',
         },
         'bigpandamon': {
             'handlers': ['logfile-bigpandamon'],

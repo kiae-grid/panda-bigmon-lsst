@@ -91,7 +91,6 @@ errorcodelist = [
 
 
 _logger = logging.getLogger('bigpandamon')
-_perfmon_logger = logging.getLogger('perfmon')
 viewParams = {}
 requestParams = {}
 
@@ -3194,7 +3193,6 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
         if not tm in errHist: errHist[tm] = 0
         errHist[tm] += 1
     _t_hist.stop()
-    _perfmon_logger.info("SQL <jobs> error timeline histogram".ljust(40," ") + " : %s", _t_hist.get_elapsed())
 
     ## Build summary table
     _t_summary.start()
@@ -3306,7 +3304,6 @@ def errorSummaryDict(request,jobs, tasknamedict, testjobs):
         if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
         if taskid in errsByTask: errsByTask[taskid]['toterrjobs'] += 1
     _t_summary.stop()
-    _perfmon_logger.info("SQL <jobs> postprocessing".ljust(40," ") + " : %s", _t_summary.get_elapsed())
 
 
                 
@@ -3508,14 +3505,8 @@ def errorSummary(request):
     _t_google_flow = ProfilingTimer("processing: GoogleFlow diagram")
     _time_profiler.add(_t_google_flow)
 
+
     _t_total.start()
-
-    qp = "\n".join(map(lambda (k, v): "%-20s: %s" % (k, repr(v)),
-      QueryDict(request.META['QUERY_STRING']).iterlists()))
-    _perfmon_logger.info("\n%s --- Error Summary Performance Test for %s: \n%s",
-      datetime.now(), dbaccess.get('default').get('ENGINE'), '-'*70)
-    _perfmon_logger.info("Query parameters\n%s\n%s", '-'*17, qp)
-
 
     testjobs = False
     if 'prodsourcelabel' in requestParams and requestParams['prodsourcelabel'].lower().find('test') >= 0:
@@ -3553,8 +3544,6 @@ def errorSummary(request):
     jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
     _t_jobs.stop()
-    _perfmon_logger.info("SQL <jobs>".ljust(40," ") + \
-      " : %s (number of records = %d)", _t_jobs.get_elapsed(), len(jobs))
     _t_job_cleaner.start()
     jobs = cleanJobList(jobs, mode='nodrop')
     _t_job_cleaner.stop()
