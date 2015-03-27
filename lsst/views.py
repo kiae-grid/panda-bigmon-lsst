@@ -3676,7 +3676,10 @@ def errorSummary(request):
         from core.pandajob.cassandra_models import jobs as nosql_jobs
         from lsst.cassandra_helpers import connectToCassandra, cqlValuesDict
 
-        connectToCassandra(dbaccess)
+        keyspace = 'cassandra'
+        if 'keyspace' in requestParams:
+            keyspace = requestParams['keyspace']
+        connectToCassandra(dbaccess, sectionName = keyspace)
 
         nosql_summary_processors = {
           'day_site_errors': {

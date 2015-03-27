@@ -7,7 +7,7 @@ from cqlengine import connection
 
 # XXX: Doesn't really belongs here, probably can be transformed
 # XXX: into some Django'ish stuff.  Should investigate and fix.
-def connectToCassandra(dbaccess):
+def connectToCassandra(dbaccess, sectionName = 'cassandra'):
     """
     Sets up Cassandra connection for Django
 
@@ -17,9 +17,11 @@ def connectToCassandra(dbaccess):
        will take 'NAME', 'USER', 'PASSWORD' and 'HOST'.
        'HOST' can contain multiple comma-separated host names.
        'NAME' specifies Cassandra keyspace to connect to.
+
+     - sectionName: section name that identifies C* DB decription
+       block from dbaccess that we want to use.
     """
 
-    sectionName = 'cassandra'
     if sectionName not in dbaccess:
         raise KeyError("Passed 'dbaccess' dict does not contain key '%s'" % \
           (sectionName))
