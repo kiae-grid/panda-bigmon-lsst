@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 import time
 import json
 
+from socket import gethostname
+
 import hashlib
 
 from django.http import HttpResponse, QueryDict
@@ -3639,6 +3641,8 @@ def __makeTimeProfilerConf(view, generation, request, suffix):
     name_components = []
     name_components.append(("view", view))
     name_components.append(("gen", generation))
+    name_components.append(("host", gethostname()))
+    name_components.append(("path", request.path))
     qd = QueryDict(request.META['QUERY_STRING'])
     name_components.extend(__flattenQueryDict(qd))
 
