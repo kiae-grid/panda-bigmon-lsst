@@ -20,6 +20,10 @@ class TimeProfiler(object):
      - get_description: expected to return timer description as string;
 
      - get_elapsed: expected to return elapsed seconds as float.
+
+    This module has TimerlikeCount object that provides such interface
+    and can be used for adding arbitrary integer parameters into
+    the list of measurements that we keep.
     """
 
     EOL = "\n"
@@ -257,3 +261,47 @@ Timer information:
                 self.formatter(fp, t_tuples)
             finally:
                 fcntl.lockf(fp, fcntl.LOCK_UN)
+
+
+class TimerlikeCount(object):
+    """
+    Implements ProfilingTimer-like interface suitable for putting
+    static counts into TimeProfiler
+    """
+
+    def __init__(self, description):
+        """ Class constructor """
+        self.description = description
+        self.value = 0
+
+
+    def set(self, value):
+        """
+        Sets stored value to the provided quantity.
+        """
+
+        self.value = value
+
+
+    def get(self):
+        """
+        Returns stored value.
+        """
+
+        return self.value
+
+
+    def get_description(self):
+        """
+        Returns our description.
+        """
+
+        return self.description
+
+
+    def get_elapsed(self):
+        """
+        Returns stored value.
+        """
+
+        return self.value

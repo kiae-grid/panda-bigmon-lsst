@@ -44,7 +44,7 @@ from core.common.models import RequestStat
 from core.common.settings.config import ENV
 
 from lsst.timer import ProfilingTimer
-from lsst.time_profilers import TimeProfiler
+from lsst.time_profilers import TimeProfiler, TimerlikeCount
 
 from settings.local import dbaccess, LOG_ROOT
 import ErrorCodes
@@ -3493,6 +3493,19 @@ def __nosqlDaySiteErrors(error_list):
     return errsBySite
 
 
+def __nosqlDaySiteErrorsJobcount(error_list):
+    """
+    Counts number of jobs aggregated inside
+    day_site_errors-like NoSQL table
+
+    Arguments:
+     - error_list: list with NoSQL query results
+    """
+
+    # error_list fields: site, errcode, diag, pandaid
+    return len(set(map(lambda x: x[3], error_list)))
+
+
 def __nosqlDaySiteErrorsCnt(error_list):
     """
     Builds error list via day_site_errors_cnt_30m-like NoSQL table
@@ -3537,6 +3550,21 @@ def __nosqlDaySiteErrorsCnt(error_list):
         errsBySite[site]['toterrjobs'] += job_count
 
     return errsBySite
+
+
+def __nosqlDaySiteErrorsCntJobcount(error_list):
+    """
+    Counts number of jobs aggregated inside
+    day_site_errors_cnt_30m-like NoSQL table
+
+    Arguments:
+     - error_list: list with NoSQL query results
+    """
+
+    retval = 0
+    for site, errcode, diag, err_count, job_count in error_list:
+        retval += job_count
+    return retval
 
 
 def getTaskName(tasktype,taskid):
@@ -3636,7 +3664,7 @@ def errorSummary(request):
     global dbaccess
 
     # NB: bump this every time you add a new profiling timer
-    metadata_gen = "3"
+    metadata_gen = "4"
 
     valid, response = initRequest(request)
     if not valid: return response
@@ -3665,6 +3693,12 @@ def errorSummary(request):
     _time_profiler.add(_t_state_summary_processing, info = "creation of task state summary information")
     _t_google_flow = ProfilingTimer("processing: GoogleFlow diagram")
     _time_profiler.add(_t_google_flow)
+    _cnt_total_jobs = TimerlikeCount("total_jobs")
+    _time_profiler.add(_cnt_total_jobs, info = "total number of selected jobs")
+    _cnt_nosql_returned_rows = TimerlikeCount("nosql_rows")
+    _time_profiler.add(_cnt_nosql_returned_rows, info = "total number of jobs/aggregated errors obtained from NoSQL")
+    _cnt_nosql_hist_bins = TimerlikeCount("nosql_hist_bins")
+    _time_profiler.add(_cnt_nosql_hist_bins, info = "total number histogram bins obtained from NoSQL")
 
 
     _t_total.start()
@@ -3685,6 +3719,7 @@ def errorSummary(request):
           'day_site_errors': {
             'model': day_site_errors,
             'handler': __nosqlDaySiteErrors,
+            'jobcount': __nosqlDaySiteErrorsJobcount,
             'fields': [
               'computingsite', 'errcode', 'diag', 'pandaid'
             ],
@@ -3692,6 +3727,7 @@ def errorSummary(request):
           'day_site_errors_cnt_30m': {
             'model': day_site_errors_cnt_30m,
             'handler': __nosqlDaySiteErrorsCnt,
+            'jobcount': __nosqlDaySiteErrorsCntJobcount,
             'fields': [
               'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
             ],
@@ -3731,6 +3767,10 @@ def errorSummary(request):
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
 
     jobs = []
+    total_jobs_count = 0
+    nosql_jobs_count = 0
+    nosql_returned_rows = 0
+    nosql_hist_count = 0
     errHist = None
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
     _t_jobs.start()
@@ -3749,22 +3789,35 @@ def errorSummary(request):
                     nosql_jobs = nosql_jobs[:JOB_LIMIT]
                     break
             jobs.extend(nosql_jobs)
+            nosql_returned_rows = len(nosql_jobs)
         elif nosql_type in nosql_summary_processors.keys():
             processor = nosql_summary_processors[nosql_type]
             fields = processor['fields']
             model = processor['model']
             nosql_error_list = \
               list(model.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list(*fields))
+            nosql_returned_rows = len(nosql_error_list)
         else:
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
 
         # Get data for histogram
         errHist = list(day_errors_30m.objects.filter(date__in=dates).values_list('base_mtime', 'count'))
+        nosql_hist_count = len(errHist)
     else:
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
         jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
     _t_archived_jobs.stop()
     _t_jobs.stop()
+
+    # Pre-processed error tables from NoSQL need special handling
+    # of job count since they carry aggregated information.
+    if nosql and nosql_type in nosql_summary_processors.keys():
+        processor = nosql_summary_processors[nosql_type]
+        nosql_jobs_count = processor['jobcount'](nosql_error_list)
+    total_jobs_count = len(jobs) + nosql_jobs_count
+    _cnt_total_jobs.set(total_jobs_count)
+    _cnt_nosql_returned_rows.set(nosql_returned_rows)
+    _cnt_nosql_hist_bins.set(nosql_hist_count)
 
     _t_job_cleaner.start()
     jobs = cleanJobList(jobs, mode='nodrop')
