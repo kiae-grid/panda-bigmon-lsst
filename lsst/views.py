@@ -122,6 +122,11 @@ def __makeDateRange(start, stop, out_fmt):
     """
     Creates iterable that will yield all dates in a given range.
 
+    Created dates will be the same as for BETWEEN statement
+    and taking into account that BETWEEN DateA AND DateB is
+    translated into BETWEEN 'DateA 00:00:00' AND 'DateB 00:00:00'
+    the last day won't be included into the produced range.
+
     Arguments:
      - start, stop: first and last dates;
      - out_fmt: format string for strftime to which we will
