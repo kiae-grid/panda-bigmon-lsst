@@ -131,7 +131,8 @@ def __makeDateRange(start, stop, out_fmt):
     Arguments:
      - start, stop: first and last dates;
      - out_fmt: format string for strftime to which we will
-       transform each date from the provided range.
+       transform each date from the provided range; the value
+       of None instructs to leave datetime objects without conversion.
     """
 
     retval = []
@@ -143,6 +144,9 @@ def __makeDateRange(start, stop, out_fmt):
     day = timedelta(days = 1)
     for i in xrange((d2 - d1).days):
         retval.append(d1.date() + i * day)
+
+    if out_fmt != None:
+        retval = map(lambda x: x.strftime(out_fmt), retval)
 
     return retval
 
