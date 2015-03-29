@@ -1,4 +1,5 @@
 import logging, re, json, commands, os, copy
+import sys
 from datetime import datetime, timedelta
 import time
 import json
@@ -146,6 +147,39 @@ def __makeDateRange(start, stop, out_fmt):
     return retval
 
 
+def __sliceDateRange(start, stop, out_fmt, step = 1):
+    """
+    Creates tuples that will hold semi-open intervals
+    [start_i, stop_i) that will cover the given [start, stop)
+    interval.
+
+    Arguments:
+     - start, stop: first and last dates;
+     - out_fmt: format string for strftime to which we will
+       transform each date from the provided range.
+     - step: step between date points (in days).
+    """
+
+    in_fmt = defaultDatetimeFormat
+    f = lambda x: datetime.utcfromtimestamp(time.mktime(time.strptime(x, in_fmt)))
+    d1 = f(start)
+    d2 = f(stop)
+    if d1 >= d2:
+        return []
+    day = timedelta(days = 1)
+    days_total = (d2 - d1).days
+    retval = []
+    for i in xrange(0, days_total, step):
+        retval.append(d1.date() + i * day)
+    if d2 != retval[-1]:
+        retval.append(d2)
+
+    if out_fmt != None:
+        retval = map(lambda d: d.strftime(out_fmt), retval)
+
+    return map(lambda n: (retval[n], retval[n+1]), xrange(len(retval)-1))
+
+
 def __errorcodelist2nameDict(code_list):
     """
     Makes error name to error class mapping dict.
@@ -163,6 +197,55 @@ def __errorcodelist2nameDict(code_list):
     """
 
     return dict(map(lambda ecl: (ecl['name'], ecl['error']), code_list))
+
+
+def __makeDateSlicedQuery(model, filter_, step_in_days, result, limit, values):
+    """
+    Slice time interval into shorter ones and perform split queries.
+
+    Used mainly for Oracle queries with long date intervals when
+    single request tends to run out of time because of the server-side
+    duration limit.
+
+    Arguments:
+
+     - mode: Django model object;
+
+     - filter_: filter dict; it must contain 'modificationtime__range'
+       predicate;
+
+     - step_in_days: interval for a single query;
+
+     - result: iterable to append query results to;
+
+     - limit: limits number of returned query items;
+
+     - values: tuple with model fields to be returned from query.
+    """
+
+    date_fmt = defaultDatetimeFormat
+
+    if 'modificationtime__range' not in filter_:
+        raise ValueError("Passed filter object '%s'" % (filter_) + \
+          " without 'modificationtime__range'")
+    (start, stop) = filter_['modificationtime__range']
+
+    ranges = __sliceDateRange(start, stop, date_fmt, step = step_in_days)
+    if len(ranges) < 2:
+        result.extend(model.objects.filter(**filter_)[:limit].values(*values))
+        return
+
+    query = filter_.copy()
+    cur_limit = limit
+    for (start, stop) in ranges:
+        query['modificationtime__range'] = (start, stop)
+        _logger.debug("Making query for slice %s -- %s" % (start, stop))
+        r = model.objects.filter(**query)[:cur_limit].values(*values)
+        _logger.debug("Finished: received %d records, cur_limit was %d!" % (len(r), cur_limit))
+        result.extend(r)
+        cur_limit -= len(r)
+        if cur_limit <= 0:
+            break
 
 
 def setupSiteInfo():
@@ -3813,8 +3896,28 @@ def errorSummary(request):
         errHist = list(day_errors_30m.objects.filter(date__in=dates).timeout(None).values_list('base_mtime', 'count'))
         nosql_hist_count = len(errHist)
     else:
-        jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-        jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
+        if 'datesliced' in requestParams:
+            try:
+                date_slice = int(requestParams['datesliced'])
+                if date_slice <= 0:
+                    raise ValueError("number of days in slice must be positive")
+            except ValueError:
+                raise ValueError("Bad 'datesliced' request value: %s" % (e)), None, sys.exc_info()[2]
+            _logger.debug("Doing date-sliced jobsarchived4 query, %d days each" % (date_slice))
+            __makeDateSlicedQuery(Jobsarchived4, query, date_slice,
+              jobs, JOB_LIMIT, values)
+            _logger.debug("Done!")
+            _logger.debug("Doing date-sliced jobsarchived query, %d days each" % (date_slice))
+            __makeDateSlicedQuery(Jobsarchived, query, date_slice,
+              jobs, JOB_LIMIT, values)
+            _logger.debug("Done!")
+        else:
+            _logger.debug("Doing jobsarchived4 query")
+            jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+            _logger.debug("Done!")
+            _logger.debug("Doing jobsarchived query")
+            jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
+            _logger.debug("Done!")
     _t_archived_jobs.stop()
     _t_jobs.stop()
 
