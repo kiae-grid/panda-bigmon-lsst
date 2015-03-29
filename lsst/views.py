@@ -3792,7 +3792,7 @@ def errorSummary(request):
         if nosql_type == 'jobs':
             nosql_jobs = []
             for date in dates:
-                query = nosql_jobs.objects.filter(date=date).limit(JOB_LIMIT)
+                query = nosql_jobs.objects.filter(date=date).limit(JOB_LIMIT).timeout(None)
                 nosql_jobs.extend(cqlValuesDict(values, query))
                 if len(nosql_jobs) >= JOB_LIMIT:
                     nosql_jobs = nosql_jobs[:JOB_LIMIT]
@@ -3804,13 +3804,13 @@ def errorSummary(request):
             fields = processor['fields']
             model = processor['model']
             nosql_error_list = \
-              list(model.objects.filter(date__in=dates).limit(JOB_LIMIT).values_list(*fields))
+              list(model.objects.filter(date__in=dates).limit(JOB_LIMIT).timeout(None).values_list(*fields))
             nosql_returned_rows = len(nosql_error_list)
         else:
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
 
         # Get data for histogram
-        errHist = list(day_errors_30m.objects.filter(date__in=dates).values_list('base_mtime', 'count'))
+        errHist = list(day_errors_30m.objects.filter(date__in=dates).timeout(None).values_list('base_mtime', 'count'))
         nosql_hist_count = len(errHist)
     else:
         jobs.extend(Jobsarchived4.objects.filter(**query)[:JOB_LIMIT].values(*values))
