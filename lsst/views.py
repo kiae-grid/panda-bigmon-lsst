@@ -98,12 +98,6 @@ _logger = logging.getLogger('bigpandamon')
 viewParams = {}
 requestParams = {}
 
-# XXX: I don't like this, should rewrite at some point.  --rea
-_time_profiler = None
-_t_jobs = None
-_t_hist = None
-_t_summary = None
-
 LAST_N_HOURS_MAX = 0
 JOB_LIMIT = 0
 TFIRST = timezone.now()
@@ -3301,7 +3295,7 @@ def jobStateSummary(jobs):
     return statecount
 
 
-def errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, ehList):
+def errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, ehList, t_hist, t_summary):
     """
     Take a job list and produce error summaries from it.
 
@@ -3314,8 +3308,9 @@ def errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, ehList):
      - errsBySite: hash that holds already filled parts of
        by-site errors (that may come from NoSQL)
      - ehList: error histogram as a list of (bin, value) tuples.
+     - t_hist: timer for histogram
+     - t_summary: timer for summary table
     """
-    global _t_hist, _t_summary
     errsByCount = {}
     errsByUser = {}
     errsByTask = {}
@@ -3335,7 +3330,7 @@ def errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, ehList):
         errJobs.append(job)
 
     ## Build histogram for number of errors versus time
-    _t_hist.start()
+    t_hist.start()
     # We may have the part of the histogram already available.
     # Absorb its values.
     if ehList:
@@ -3345,10 +3340,10 @@ def errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, ehList):
         tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
         if not tm in errHist: errHist[tm] = 0
         errHist[tm] += 1
-    _t_hist.stop()
+    t_hist.stop()
 
     ## Build summary table
-    _t_summary.start()
+    t_summary.start()
     for job in errJobs:
         site = job['computingsite']
         user = job['produsername']
@@ -3456,7 +3451,7 @@ def errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, ehList):
                     errsByTask[taskid]['toterrors'] += 1
         if site in errsBySite: errsBySite[site]['toterrjobs'] += 1
         if taskid in errsByTask: errsByTask[taskid]['toterrjobs'] += 1
-    _t_summary.stop()
+    t_summary.stop()
 
 
                 
@@ -3756,7 +3751,6 @@ def __makeTimeProfilerConf(view, generation, request, suffix):
 
 
 def errorSummary(request):
-    global _time_profiler, _t_jobs, _t_hist, _t_summary
     global dbaccess
 
     # NB: bump this every time you add a new profiling timer
@@ -3952,7 +3946,8 @@ def errorSummary(request):
         handler = nosql_summary_processors[nosql_type]['handler']
         errsBySite = handler(nosql_error_list)
     errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = \
-      errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, errHist)
+      errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, errHist,
+      _t_hist, _t_summary)
     _t_error_summary_processing.stop()
 
     _t_state_summary_processing.start()
