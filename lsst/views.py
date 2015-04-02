@@ -228,7 +228,7 @@ def __makeDateSlicedQuery(model, filter_, step_in_days, result, limit, values):
           " without 'modificationtime__range'")
     (start, stop) = filter_['modificationtime__range']
 
-    ranges = __sliceDateRange(start, stop, date_fmt, step = step_in_days)
+    ranges = __sliceDateRange(start, stop, None, step = step_in_days)
     if len(ranges) < 2:
         result.extend(model.objects.filter(**filter_)[:limit].values(*values))
         return
@@ -3852,7 +3852,7 @@ def errorSummary(request):
     dates = None
     if nosql:
         (start, stop) = query['modificationtime__range']
-        dates = __makeDateRange(start, stop, '%Y-%m-%d')
+        dates = __makeDateRange(start, stop, None)
 
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
 
