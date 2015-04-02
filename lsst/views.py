@@ -164,6 +164,14 @@ def __sliceDateRange(start, stop, out_fmt, step = 1):
     d2 = f(stop)
     if d1 >= d2:
         return []
+    try:
+        if d1.hour != 0 or d1.minute != 0 or d1.second != 0:
+            raise ValueError(start)
+        if d2.hour != 0 or d2.minute != 0 or d2.second != 0:
+            raise ValueError(stop)
+    except ValueError, e:
+        raise ValueError("Sorry, folks: can't use non-day-aligned date ('%s') "
+          "in my current implementation" % (e))
     day = timedelta(days = 1)
     days_total = (d2 - d1).days
     retval = []
@@ -176,6 +184,32 @@ def __sliceDateRange(start, stop, out_fmt, step = 1):
         retval = map(lambda d: d.strftime(out_fmt), retval)
 
     return map(lambda n: (retval[n], retval[n+1]), xrange(len(retval)-1))
+
+
+def __parseDateSpec(date):
+    """
+    Parses date specification that can come in different
+    formats into struct_time.
+
+    Arguments:
+     - date: date string to parse.
+
+    Returns struct_time, raises ValueError on conversion problems.
+    """
+
+    allowed = [
+      (r'^\d\d\d\d-\d\d-\d\d$', '%Y-%m-%d'),
+      (r'^\d\d\d\d-\d\d-\d\dT\d\d:\d\d$', '%Y-%m-%dT%H:%M'),
+      (r'^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d$', '%Y-%m-%dT%H:%M:%S'),
+    ]
+
+    for spec in allowed:
+        (regex, fmt) = spec
+        if re.search(regex, date):
+            return time.strptime(date, fmt)
+
+    raise ValueError("time specification '%s' doesn't match any of known formats" % \
+      (date))
 
 
 def __errorcodelist2nameDict(code_list):
@@ -415,14 +449,14 @@ def setupView(request, opmode='', hours=0, limit=-99, querytype='job'):
 
     startdate = None
     if 'date_from' in requestParams:
-        time_from_struct = time.strptime(requestParams['date_from'],'%Y-%m-%d')
+        time_from_struct = __parseDateSpec(requestParams['date_from'])
         startdate = datetime.utcfromtimestamp(time.mktime(time_from_struct)).strftime(defaultDatetimeFormat)
     if not startdate:
         startdate = timezone.now() - timedelta(hours=LAST_N_HOURS_MAX)
         startdate = startdate.strftime(defaultDatetimeFormat)
     enddate = None
     if 'date_to' in requestParams:
-        time_from_struct = time.strptime(requestParams['date_to'],'%Y-%m-%d')
+        time_from_struct = __parseDateSpec(requestParams['date_to'])
         enddate = datetime.utcfromtimestamp(time.mktime(time_from_struct)).strftime(defaultDatetimeFormat)
     if 'earlierthan' in requestParams:
         enddate = timezone.now() - timedelta(hours=int(requestParams['earlierthan']))
