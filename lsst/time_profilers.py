@@ -42,6 +42,8 @@ class TimeProfiler(object):
         Arguments:
 
          - filename: name of the file we will dump measurements into.
+           It will be appended with the extension during the invocation
+           of dump();
 
          - comment: comment that carries measurement information;
            can be None that means "don't write comments"; will be written
@@ -116,9 +118,6 @@ class TimeProfiler(object):
         if comment != None:
             header += TimeProfiler.__comment_out(comment,
               comment_char, TimeProfiler.EOL)
-        header += "timestamp"
-        for tn in timer_names:
-            header += "\t%s" % (tn)
         fp.write(header + TimeProfiler.EOL)
 
 
@@ -137,8 +136,7 @@ class TimeProfiler(object):
 
         line = str(TimeProfiler.__current_timestamp())
         for tt in timer_tuples:
-            safe_name = tt[0].replace("\t", " ")
-            line += "\t%s:%s" % (safe_name, tt[1])
+            line += (TimeProfiler.EOL + "  %s: %s" % (tt[0], tt[1]))
         fp.write(line + TimeProfiler.EOL)
 
 
@@ -236,14 +234,26 @@ class TimeProfiler(object):
         self.timer_information.append(info)
 
 
-    def dump(self):
-        """ Dumps current values for timers into the output file """
+    def dump(self, extension, formatter = None):
+        """
+        Dumps current values for timers into the output file
 
+        Arguments:
+
+         - extension: file extension for output file; will be concatenated
+           with base file name without dot ('.') and any other characters;
+
+         - formatter: if specified and not None, self.set_formatter(formatter)
+           will be called at the beginning of this function.
+        """
+
+        if formatter != None:
+            self.set_formatter(formatter)
         t_tuples = map(lambda x: (x.get_description(), x.get_elapsed()),
           self.timers)
         t_names = map(lambda x: x[0], t_tuples)
 
-        with open(self.filename, "a") as fp:
+        with open(self.filename + extension, "a") as fp:
             fcntl.lockf(fp, fcntl.LOCK_EX)
             try:
                 statinfo = os.fstat(fp.fileno())

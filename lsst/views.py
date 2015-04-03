@@ -3751,7 +3751,7 @@ def __flattenQueryDict(qd):
     return sorted(retval, cmp = __comparator)
 
 
-def __makeTimeProfilerConf(view, generation, request, suffix):
+def __makeTimeProfilerConf(view, generation, request):
     """
     Creates configuration for request time profiler.
 
@@ -3764,9 +3764,7 @@ def __makeTimeProfilerConf(view, generation, request, suffix):
        your generation each time you add new timers or change
        processing type for timers;
 
-     - request: HTTP request object;
-
-     - suffix: filename suffix.
+     - request: HTTP request object.
 
     Return value is a tuple of (filename, metadata) where
 
@@ -3797,16 +3795,16 @@ def __makeTimeProfilerConf(view, generation, request, suffix):
 
     filename = ",".join(map(lambda (k, v): "%s:%s" % (k, v),
       name_components)).replace(os.path.sep, "-")
-    if len(filename + suffix) > max_name_len:
+    if len(filename) > max_name_len:
         digest = hashlib.sha1(filename).hexdigest()
-        to_leave = max_name_len - (len(digest) + 1) - len(suffix)
+        to_leave = max_name_len - (len(digest) + 1)
         if to_leave < 0:
             raise RuntimeError("Can't make unique log file name with "\
-              "maximal filename length of %d, digest '%s' and suffix '%s'" % \
-              (max_name_len, digest, suffix))
+              "maximal filename length of %d and digest '%s'" % \
+              (max_name_len, digest))
         filename = "%s-%s" % (filename[0:to_leave], digest)
 
-    return (os.path.join(LOG_ROOT, filename + suffix), metadata)
+    return (os.path.join(LOG_ROOT, filename), metadata)
 
 
 def errorSummary(request):
@@ -3818,10 +3816,14 @@ def errorSummary(request):
     valid, response = initRequest(request)
     if not valid: return response
 
+    # XXX: It isn't very good to have no extension here
+    # XXX: and append filename extension later, since
+    # XXX: __makeTimeProfilerConf tests for the total filename
+    # XXX: length and will cut it down only when it is bigger
+    # XXX: than OS/FS limits.
     (_tp_file, _tp_metadata) = \
-      __makeTimeProfilerConf("errors", metadata_gen, request, ".csv")
+      __makeTimeProfilerConf("errors", metadata_gen, request)
     _time_profiler = TimeProfiler(_tp_file, _tp_metadata)
-    _time_profiler.set_formatter("csv")
     _t_total = ProfilingTimer("total_time")
     _time_profiler.add(_t_total, info = "walltime for errorSummary()")
     _t_jobs = ProfilingTimer("jobs_DBquery")
@@ -4098,7 +4100,8 @@ def errorSummary(request):
     _t_google_flow.stop()
 
     _t_total.stop()
-    _time_profiler.dump()
+    _time_profiler.dump(".txt", "plaintext")
+    _time_profiler.dump(".csv", "csv")
 
     request.session['max_age_minutes'] = 6
     if request.META.get('CONTENT_TYPE', 'text/plain') == 'text/plain':
