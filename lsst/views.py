@@ -3970,7 +3970,9 @@ def errorSummary(request):
             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
             if ranged_query:
                 if processor['base_mtime range query?']:
-                    querySet = querySet.filter(base_mtime__gt=start).filter(base_mtime__lt=stop)
+                    # Using (t >= start && t < stop) to sync our behaviour
+                    # with range-less query (date in $date_list).
+                    querySet = querySet.filter(base_mtime__gte=start).filter(base_mtime__lt=stop)
                 else:
                     raise RuntimeError("Programming error: "
                       "unhandled ranged query for model '%s'" % (nosql_type))
