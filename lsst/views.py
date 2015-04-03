@@ -113,14 +113,39 @@ VOLIST = [ 'atlas', 'bigpanda', 'htcondor', 'lsst', ]
 VONAME = { 'atlas' : 'ATLAS', 'bigpanda' : 'BigPanDA', 'htcondor' : 'HTCondor', 'lsst' : 'LSST', '' : '' }
 VOMODE = ' '
 
+
+def __isMidnight(date):
+    """ Checks if the provided datetime is a day boundary """
+
+    midnight = datetime(date.year, date.month, date.day,
+      0, 0, 0, 0, date.tzinfo)
+    return date == midnight
+
+
+def __str2datetime(x, fmt):
+    """
+    Converts given string to the datetime object
+
+    Arguments:
+     - x: string to convert
+     - fmt: format to use for conversion
+    """
+
+    return datetime.utcfromtimestamp(time.mktime(time.strptime(x, fmt)))
+
+
 def __makeDateRange(start, stop, out_fmt):
     """
     Creates iterable that will yield all dates in a given range.
 
-    Created dates will be the same as for BETWEEN statement
-    and taking into account that BETWEEN DateA AND DateB is
-    translated into BETWEEN 'DateA 00:00:00' AND 'DateB 00:00:00'
-    the last day won't be included into the produced range.
+    We will create the list of dates which will be present
+    in semi-open interval [start, stop).  So, if the last date
+    will have time component equal to 00:00:00, this day won't
+    be considered for inclusion (like in BETWEEN predicate);
+    otherwise we will consider it too.
+
+    All returned dates will have time component of 00:00:00
+    in UTC.
 
     Arguments:
      - start, stop: first and last dates;
@@ -132,12 +157,13 @@ def __makeDateRange(start, stop, out_fmt):
     retval = []
 
     in_fmt = defaultDatetimeFormat
-    f = lambda x: datetime.utcfromtimestamp(time.mktime(time.strptime(x, in_fmt)))
-    d1 = f(start)
-    d2 = f(stop)
+    d1 = __str2datetime(start, in_fmt)
+    d2 = __str2datetime(stop, in_fmt)
     day = timedelta(days = 1)
-    for i in xrange((d2 - d1).days):
-        retval.append(d1.date() + i * day)
+    date = datetime(d1.year, d1.month, d1.day, 0, 0, 0, 0, d1.tzinfo)
+    while date < d2:
+        retval.append(date)
+        date += day
 
     if out_fmt != None:
         retval = map(lambda x: x.strftime(out_fmt), retval)
@@ -159,9 +185,8 @@ def __sliceDateRange(start, stop, out_fmt, step = 1):
     """
 
     in_fmt = defaultDatetimeFormat
-    f = lambda x: datetime.utcfromtimestamp(time.mktime(time.strptime(x, in_fmt)))
-    d1 = f(start)
-    d2 = f(stop)
+    d1 = __str2datetime(start, in_fmt)
+    d2 = __str2datetime(stop, in_fmt)
     if d1 >= d2:
         return []
     try:
@@ -3830,7 +3855,8 @@ def errorSummary(request):
     nosql = 'nosql' in requestParams
     if nosql:
         nosql_type = requestParams['nosql']
-        from core.pandajob.cassandra_models import day_site_errors, day_errors_30m, day_site_errors_cnt_30m
+        from core.pandajob.cassandra_models import day_site_errors, day_errors_30m
+        from core.pandajob.cassandra_models import day_site_errors_cnt_30m, day_mtime_site_errors_cnt_30m
         from core.pandajob.cassandra_models import jobs as nosql_jobs
         from lsst.cassandra_helpers import connectToCassandra, cqlValuesDict
 
@@ -3844,6 +3870,7 @@ def errorSummary(request):
             'model': day_site_errors,
             'handler': __nosqlDaySiteErrors,
             'jobcount': __nosqlDaySiteErrorsJobcount,
+            'base_mtime range query?': False,
             'fields': [
               'computingsite', 'errcode', 'diag', 'pandaid'
             ],
@@ -3852,6 +3879,16 @@ def errorSummary(request):
             'model': day_site_errors_cnt_30m,
             'handler': __nosqlDaySiteErrorsCnt,
             'jobcount': __nosqlDaySiteErrorsCntJobcount,
+            'base_mtime range query?': False,
+            'fields': [
+              'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
+            ],
+          },
+          'day_mtime_site_errors_cnt_30m': {
+            'model': day_mtime_site_errors_cnt_30m,
+            'handler': __nosqlDaySiteErrorsCnt,
+            'jobcount': __nosqlDaySiteErrorsCntJobcount,
+            'base_mtime range query?': True,
             'fields': [
               'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
             ],
@@ -3884,9 +3921,16 @@ def errorSummary(request):
     query = setupView(request, hours=hours, limit=limit)
 
     dates = None
+    start = None
+    stop = None
+    ranged_query = False
     if nosql:
         (start, stop) = query['modificationtime__range']
         dates = __makeDateRange(start, stop, None)
+        fmt = defaultDatetimeFormat
+        start = __str2datetime(start, fmt)
+        stop = __str2datetime(stop, fmt)
+        ranged_query = not (__isMidnight(start) and __isMidnight(stop))
 
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
 
@@ -3916,10 +3960,22 @@ def errorSummary(request):
             nosql_returned_rows = len(nosql_jobs)
         elif nosql_type in nosql_summary_processors.keys():
             processor = nosql_summary_processors[nosql_type]
+
+            if ranged_query and not processor['base_mtime range query?']:
+                raise ValueError("Query with non-midnight boundaries, "
+                  "but model '%s' doesn't support that" % (nosql_type))
+
             fields = processor['fields']
             model = processor['model']
+            querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
+            if ranged_query:
+                if processor['base_mtime range query?']:
+                    querySet = querySet.filter(base_mtime__gt=start).filter(base_mtime__lt=stop)
+                else:
+                    raise RuntimeError("Programming error: "
+                      "unhandled ranged query for model '%s'" % (nosql_type))
             nosql_error_list = \
-              list(model.objects.filter(date__in=dates).limit(JOB_LIMIT).timeout(None).values_list(*fields))
+              list(querySet.timeout(None).values_list(*fields))
             nosql_returned_rows = len(nosql_error_list)
         else:
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
