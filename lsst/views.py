@@ -3985,6 +3985,7 @@ def errorSummary(request):
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
 
         # Get data for histogram
+        # TODO: fix the case for range queries that aren't spanning whole days
         errHist = list(day_errors_30m.objects.filter(date__in=dates).timeout(None).values_list('base_mtime', 'count'))
         nosql_hist_count = len(errHist)
     else:
@@ -4033,7 +4034,6 @@ def errorSummary(request):
     _t_jedi_tasks.stop()
 
     ## Build the error summary.
-    # TODO: sumd!
     _t_error_summary_processing.start()
     errsBySite = {}
     if nosql and nosql_type in nosql_summary_processors.keys():
@@ -4044,6 +4044,9 @@ def errorSummary(request):
       _t_hist, _t_summary)
     _t_error_summary_processing.stop()
 
+    # Simulate sumd for NoSQL
+    if nosql:
+        sumd = {'dummy': 'value'}
     _t_state_summary_processing.start()
     ## Build the state summary and add state info to site error summary
     #notime = True
