@@ -324,6 +324,32 @@ def __makeDateSlicedQuery(model, filter_, step_in_days, result, limit, values):
             break
 
 
+def __onlyErrorJobs(jobs, alljobs, requestParams):
+    """
+    Build list of all error jobs that match our filters.
+    Helper for errorSummaryDict and alike.
+
+    Arguments:
+     - jobs: array of all jobs;
+     - alljobs: flag that tells us if we should consider all jobs,
+       not only failed ones;
+     - requestParams: HTTP request parameters.
+    
+    Returns list of all selected (errorred) jobs.
+    """
+
+    retval = []
+    for job in jobs:
+        if not alljobs:
+            if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
+        site = job['computingsite']
+        if 'cloud' in requestParams:
+            if site in homeCloud and homeCloud[site] != requestParams['cloud']: continue
+        retval.append(job)
+
+    return retval
+
+
 def setupSiteInfo():
     global homeCloud, objectStores, pandaSites, callCount
     callCount += 1
@@ -3373,52 +3399,24 @@ def jobStateSummary(jobs):
     return statecount
 
 
-def errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, ehList, t_hist, t_summary):
+def errorSummaryDict(request, errJobs, tasknamedict, errsBySite, t_summary):
     """
     Take a job list and produce error summaries from it.
 
     Arguments:
      - request: HTTP request
-     - jobs: job array obtained from database
+     - errJobs: list of jobs that are considered to have errors
      - tasknamedict: hash with task name mapping
-     - testjobs: boolean flag indicating if caller wants
-       us to process all jobs (True) or only errorred ones
      - errsBySite: hash that holds already filled parts of
        by-site errors (that may come from NoSQL)
-     - ehList: error histogram as a list of (bin, value) tuples.
-     - t_hist: timer for histogram
      - t_summary: timer for summary table
     """
+
     errsByCount = {}
     errsByUser = {}
     errsByTask = {}
     sumd = {}
-    ## histogram of errors vs. time, for plotting
-    errHist = {}
     flist = [ 'cloud', 'computingsite', 'produsername', 'taskid', 'jeditaskid', 'processingtype', 'prodsourcelabel', 'transformation', 'workinggroup', 'specialhandling', 'jobstatus' ]
-
-    # Build list of all error jobs that match our filters
-    errJobs = []
-    for job in jobs:
-        if not testjobs:
-            if job['jobstatus'] not in [ 'failed', 'holding' ]: continue
-        site = job['computingsite']
-        if 'cloud' in requestParams:
-            if site in homeCloud and homeCloud[site] != requestParams['cloud']: continue
-        errJobs.append(job)
-
-    ## Build histogram for number of errors versus time
-    t_hist.start()
-    # We may have the part of the histogram already available.
-    # Absorb its values.
-    if ehList:
-        errHist = dict(ehList)
-    for job in errJobs:
-        tm = job['modificationtime']
-        tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
-        if not tm in errHist: errHist[tm] = 0
-        errHist[tm] += 1
-    t_hist.stop()
 
     ## Build summary table
     t_summary.start()
@@ -3599,13 +3597,36 @@ def errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, ehList, 
         for item in suml:
             item['list'] = sorted(item['list'], key=lambda x:-x['kvalue'])
 
-    kys = errHist.keys()
-    kys.sort()
-    errHistL = []
-    for k in kys:
-        errHistL.append( [ k, errHist[k] ] )
+    return errsByCountL, errsBySiteL, errsByUserL, errsByTaskL, suml
 
-    return errsByCountL, errsBySiteL, errsByUserL, errsByTaskL, suml, errHistL
+
+def errorHistogram(errJobs, ehList):
+    """
+    Builds (or extends) error histogram array
+
+    Arguments:
+     - errJobs: errorred jobs;
+     - ehList: already existing parts of the histogram
+       or None.
+    """
+
+    errHist = {}
+
+    # We may have the part of the histogram already available.
+    # Absorb its values.
+    if ehList:
+        errHist = dict(ehList)
+    for job in errJobs:
+        tm = job['modificationtime']
+        tm = tm - timedelta(minutes=tm.minute % 30, seconds=tm.second, microseconds=tm.microsecond)
+        if not tm in errHist: errHist[tm] = 0
+        errHist[tm] += 1
+
+    retval = []
+    for k in sorted(errHist.keys()):
+        retval.append([k, errHist[k]])
+
+    return retval
 
 
 def __nosqlDaySiteErrors(error_list):
@@ -4002,10 +4023,12 @@ def errorSummary(request):
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
 
         # Get data for histogram
+        _t_hist.start()
         querySet = day_errors_30m.objects.filter(date__in=dates)
         if ranged_query:
             querySet = __restrictToInterval(querySet, start, stop)
         errHist = list(querySet.timeout(None).values_list('base_mtime', 'count'))
+        _t_hist.stop()
         nosql_hist_count = len(errHist)
     else:
         if 'datesliced' in requestParams:
@@ -4058,9 +4081,13 @@ def errorSummary(request):
     if nosql and nosql_type in nosql_summary_processors.keys():
         handler = nosql_summary_processors[nosql_type]['handler']
         errsBySite = handler(nosql_error_list)
-    errsByCount, errsBySite, errsByUser, errsByTask, sumd, errHist = \
-      errorSummaryDict(request, jobs, tasknamedict, testjobs, errsBySite, errHist,
-      _t_hist, _t_summary)
+    errJobs = __onlyErrorJobs(jobs, testjobs, requestParams)
+    _t_hist.start()
+    errHist = errorHistogram(errJobs, errHist)
+    _t_hist.stop()
+    errsByCount, errsBySite, errsByUser, errsByTask, sumd = \
+      errorSummaryDict(request, errJobs, tasknamedict, errsBySite,
+      _t_summary)
     _t_error_summary_processing.stop()
 
     # Simulate sumd for NoSQL
