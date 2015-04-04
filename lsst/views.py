@@ -3982,13 +3982,19 @@ def errorSummary(request):
     nosql_returned_rows = 0
     nosql_hist_count = 0
     errHist = None
+    errHistIsDone = False
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
     _t_jobs.start()
     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     _t_archived_jobs.start()
+    # The below code assumes that at this point jobs will contain all
+    # non-historic (non-archived) data, so, please, don't break this.
+
     if nosql:
+        # Save current (non-archived) jobs for histogram creation.
+        errJobs = __onlyErrorJobs(jobs, testjobs, requestParams)
         # Get data for job summaries
         if nosql_type == 'jobs':
             nosql_jobs = []
@@ -4029,6 +4035,15 @@ def errorSummary(request):
             querySet = __restrictToInterval(querySet, start, stop)
         errHist = list(querySet.timeout(None).values_list('base_mtime', 'count'))
         _t_hist.stop()
+        # Append histogram data from non-historic tables
+        _t_hist.start()
+        errHist = errorHistogram(errJobs, errHist)
+        _t_hist.stop()
+
+        # Signal the below code that we don't need histogram
+        # calculations: we had already joined NoSQL and SQL parts
+        errHistIsDone = True
+
         nosql_hist_count = len(errHist)
     else:
         if 'datesliced' in requestParams:
@@ -4082,9 +4097,10 @@ def errorSummary(request):
         handler = nosql_summary_processors[nosql_type]['handler']
         errsBySite = handler(nosql_error_list)
     errJobs = __onlyErrorJobs(jobs, testjobs, requestParams)
-    _t_hist.start()
-    errHist = errorHistogram(errJobs, errHist)
-    _t_hist.stop()
+    if not errHistIsDone:
+        _t_hist.start()
+        errHist = errorHistogram(errJobs, errHist)
+        _t_hist.stop()
     errsByCount, errsBySite, errsByUser, errsByTask, sumd = \
       errorSummaryDict(request, errJobs, tasknamedict, errsBySite,
       _t_summary)
