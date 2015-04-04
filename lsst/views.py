@@ -211,6 +211,25 @@ def __sliceDateRange(start, stop, out_fmt, step = 1):
     return map(lambda n: (retval[n], retval[n+1]), xrange(len(retval)-1))
 
 
+def __restrictToInterval(qs, start, stop):
+    """
+    Adds filters to restrict base_mtime to interval [start, stop)
+
+    Arguments:
+     - qs: query set to add filters to;
+     - start, stop: interval boundaries
+
+    Returns new query set with filters applied.
+
+    Semi-open interval is used because
+     - they stack fine without double-counting or missing
+       any boundary points;
+     - this is consistent with query "date in ($date_list)"
+       that simulates BETWEEN SQL clause.
+    """
+    return qs.filter(base_mtime__gte=start).filter(base_mtime__lt=stop)
+
+
 def __parseDateSpec(date):
     """
     Parses date specification that can come in different
@@ -3972,9 +3991,7 @@ def errorSummary(request):
             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
             if ranged_query:
                 if processor['base_mtime range query?']:
-                    # Using (t >= start && t < stop) to sync our behaviour
-                    # with range-less query (date in $date_list).
-                    querySet = querySet.filter(base_mtime__gte=start).filter(base_mtime__lt=stop)
+                    querySet = __restrictToInterval(querySet, start, stop)
                 else:
                     raise RuntimeError("Programming error: "
                       "unhandled ranged query for model '%s'" % (nosql_type))
@@ -3985,8 +4002,10 @@ def errorSummary(request):
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
 
         # Get data for histogram
-        # TODO: fix the case for range queries that aren't spanning whole days
-        errHist = list(day_errors_30m.objects.filter(date__in=dates).timeout(None).values_list('base_mtime', 'count'))
+        querySet = day_errors_30m.objects.filter(date__in=dates)
+        if ranged_query:
+            querySet = __restrictToInterval(querySet, start, stop)
+        errHist = list(querySet.timeout(None).values_list('base_mtime', 'count'))
         nosql_hist_count = len(errHist)
     else:
         if 'datesliced' in requestParams:
