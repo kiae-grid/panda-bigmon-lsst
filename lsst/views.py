@@ -4051,7 +4051,7 @@ def errorSummary(request):
                 date_slice = int(requestParams['datesliced'])
                 if date_slice <= 0:
                     raise ValueError("number of days in slice must be positive")
-            except ValueError:
+            except ValueError, e:
                 raise ValueError("Bad 'datesliced' request value: %s" % (e)), None, sys.exc_info()[2]
             _logger.debug("Doing date-sliced jobsarchived4 query, %d days each" % (date_slice))
             __makeDateSlicedQuery(Jobsarchived4, query, date_slice,
