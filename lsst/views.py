@@ -3629,74 +3629,9 @@ def errorHistogram(errJobs, ehList):
     return retval
 
 
-def __nosqlDaySiteErrors(error_list):
-    """
-    Builds error list via day_site_errors-like NoSQL table
-
-    Arguments:
-     - error_list: list with NoSQL query results
-
-    Returns errsBySite-like hash that can be used inside
-    errorSummaryDict().
-
-    NB: sync field list with variable nosql_summary_processors
-    from errorSummary().
-    """
-
-    errsBySite = {}
-    sitePandaIDs = {}
-    ecl_map = __errorcodelist2nameDict(errorcodelist)
-    not_an_error = frozenset((0, '0', None))
-
-    for site, errcode, diag, pandaid in error_list:
-        errname, errnum = errcode.split(":")
-        if errnum in not_an_error:
-            continue
-
-        if site not in errsBySite:
-            errsBySite[site] = {
-              'name':		site,
-              'errors':		{},
-              'toterrors':	0,
-              'toterrjobs':	0,
-            }
-            sitePandaIDs[site] = []
-        if errcode not in errsBySite[site]['errors']:
-            errsBySite[site]['errors'][errcode] = {
-              'error':		errcode,
-              'codename':	ecl_map[errname],
-              'codeval':	errnum,
-              'diag':		diag,
-              'count':		0,
-            }
-
-        errsBySite[site]['errors'][errcode]['count'] += 1
-        errsBySite[site]['toterrors'] += 1
-        sitePandaIDs[site].append(pandaid)
-
-    # Count unique errorred jobs
-    for site,ebs in errsBySite.iteritems():
-        ebs['toterrjobs'] = len(set(sitePandaIDs[site]))
-
-    return errsBySite
-
-
-def __nosqlDaySiteErrorsJobcount(error_list):
-    """
-    Counts number of jobs aggregated inside
-    day_site_errors-like NoSQL table
-
-    Arguments:
-     - error_list: list with NoSQL query results
-    """
-
-    # error_list fields: site, errcode, diag, pandaid
-    return len(set(map(lambda x: x[3], error_list)))
-
-
 def __nosqlDaySiteErrorsCnt(error_list):
     """
-    Builds error list via day_site_errors_cnt_30m-like NoSQL table
+    Builds error list via day_site_errors_cnt-like NoSQL table
 
     Arguments:
      - error_list: list with NoSQL query results
@@ -3743,7 +3678,7 @@ def __nosqlDaySiteErrorsCnt(error_list):
 def __nosqlDaySiteErrorsCntJobcount(error_list):
     """
     Counts number of jobs aggregated inside
-    day_site_errors_cnt_30m-like NoSQL table
+    day_site_errors_cnt-like NoSQL table
 
     Arguments:
      - error_list: list with NoSQL query results
@@ -3897,8 +3832,8 @@ def errorSummary(request):
     nosql = 'nosql' in requestParams
     if nosql:
         nosql_type = requestParams['nosql']
-        from core.pandajob.cassandra_models import day_site_errors, day_errors_30m
-        from core.pandajob.cassandra_models import day_site_errors_cnt_30m, day_mtime_site_errors_cnt_30m
+        from core.pandajob.cassandra_models import day_errors_30m
+        from core.pandajob.cassandra_models import day_site_errors_cnt
         from core.pandajob.cassandra_models import jobs as nosql_jobs
         from lsst.cassandra_helpers import connectToCassandra, cqlValuesDict
 
@@ -3908,29 +3843,10 @@ def errorSummary(request):
         connectToCassandra(dbaccess, sectionName = keyspace)
 
         nosql_summary_processors = {
-          'day_site_errors': {
-            'model': day_site_errors,
-            'handler': __nosqlDaySiteErrors,
-            'jobcount': __nosqlDaySiteErrorsJobcount,
-            'base_mtime range query?': False,
-            'fields': [
-              'computingsite', 'errcode', 'diag', 'pandaid'
-            ],
-          },
-          'day_site_errors_cnt_30m': {
-            'model': day_site_errors_cnt_30m,
+          'day_site_errors_cnt': {
+            'model': day_site_errors_cnt,
             'handler': __nosqlDaySiteErrorsCnt,
             'jobcount': __nosqlDaySiteErrorsCntJobcount,
-            'base_mtime range query?': False,
-            'fields': [
-              'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
-            ],
-          },
-          'day_mtime_site_errors_cnt_30m': {
-            'model': day_mtime_site_errors_cnt_30m,
-            'handler': __nosqlDaySiteErrorsCnt,
-            'jobcount': __nosqlDaySiteErrorsCntJobcount,
-            'base_mtime range query?': True,
             'fields': [
               'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
             ],
@@ -3965,14 +3881,13 @@ def errorSummary(request):
     dates = None
     start = None
     stop = None
-    ranged_query = False
+    nosql_interval = '30m'
     if nosql:
         (start, stop) = query['modificationtime__range']
         dates = __makeDateRange(start, stop, None)
         fmt = defaultDatetimeFormat
         start = __str2datetime(start, fmt)
         stop = __str2datetime(stop, fmt)
-        ranged_query = not (__isMidnight(start) and __isMidnight(stop))
 
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
 
@@ -3997,33 +3912,28 @@ def errorSummary(request):
         errJobs = __onlyErrorJobs(jobs, testjobs, requestParams)
         # Get data for job summaries
         if nosql_type == 'jobs':
-            nosql_jobs = []
+            nosqlJobs = []
             for date in dates:
                 query = nosql_jobs.objects.filter(date=date).limit(JOB_LIMIT).timeout(None)
-                nosql_jobs.extend(cqlValuesDict(values, query))
-                if len(nosql_jobs) >= JOB_LIMIT:
-                    nosql_jobs = nosql_jobs[:JOB_LIMIT]
+                nosqlJobs.extend(cqlValuesDict(values, query))
+                if len(nosqlJobs) >= JOB_LIMIT:
+                    nosqlJobs = nosqlJobs[:JOB_LIMIT]
                     break
-            jobs.extend(nosql_jobs)
-            nosql_returned_rows = len(nosql_jobs)
+            jobs.extend(nosqlJobs)
+            nosql_returned_rows = len(nosqlJobs)
         elif nosql_type in nosql_summary_processors.keys():
             processor = nosql_summary_processors[nosql_type]
 
-            if ranged_query and not processor['base_mtime range query?']:
-                raise ValueError("Query with non-midnight boundaries, "
-                  "but model '%s' doesn't support that" % (nosql_type))
-
             fields = processor['fields']
             model = processor['model']
-            querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
-            if ranged_query:
-                if processor['base_mtime range query?']:
-                    querySet = __restrictToInterval(querySet, start, stop)
-                else:
-                    raise RuntimeError("Programming error: "
-                      "unhandled ranged query for model '%s'" % (nosql_type))
-            nosql_error_list = \
-              list(querySet.timeout(None).values_list(*fields))
+            nosql_error_list = []
+            for date in dates:
+                querySet = model.objects.filter(date=date, interval=nosql_interval).limit(JOB_LIMIT)
+                querySet = __restrictToInterval(querySet, start, stop)
+                nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
+                if len(nosql_error_list) >= JOB_LIMIT:
+                    nosql_error_list = nosql_error_list[:JOB_LIMIT]
+                    break
             nosql_returned_rows = len(nosql_error_list)
         else:
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
@@ -4031,8 +3941,7 @@ def errorSummary(request):
         # Get data for histogram
         _t_hist.start()
         querySet = day_errors_30m.objects.filter(date__in=dates)
-        if ranged_query:
-            querySet = __restrictToInterval(querySet, start, stop)
+        querySet = __restrictToInterval(querySet, start, stop)
         errHist = list(querySet.timeout(None).values_list('base_mtime', 'count'))
         _t_hist.stop()
         # Append histogram data from non-historic tables
