@@ -4211,7 +4211,6 @@ def errorSummary(request):
         nosorturl = removeParam(request.get_full_path(), 'sortby')
         xurl = extensibleURL(request)
         jobsurl = xurl.replace('/errors/','/jobs/')
-        (tf, tl) = query['modificationtime__range']
         data = {
             'prefix': getPrefix(request),
             'request' : request,
@@ -4232,8 +4231,8 @@ def errorSummary(request):
             'errsByTask' : errsByTask,
             'sumd' : sumd,
             'errHist' : errHist,
-            'tfirst' : tf,
-            'tlast' : tl,
+            'tfirst' : start,
+            'tlast' : stop,
             'sortby' : sortby,
             'taskname' : taskname,
             'flowstruct' : flowstruct,
