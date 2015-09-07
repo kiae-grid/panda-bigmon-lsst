@@ -3996,7 +3996,7 @@ def errorSummary(request):
     if nosql:
         (start, stop) = query['modificationtime__range']
         __timeprofiler = "%Y-%m-%d %H:%M:%SZ"
-        intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(datetime.strptime(stop, __timeprofiler), datetime.strptime(start, __timeprofiler))
+        intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(datetime.strptime(start, __timeprofiler), datetime.strptime(stop, __timeprofiler))
         dates = __makeDateRange(start, stop, None)
         fmt = defaultDatetimeFormat
         start = __str2datetime(start, fmt)
@@ -4049,11 +4049,11 @@ def errorSummary(request):
             for key, value in date_entries.iteritems():
                 if (len(value) > 0):
                     for i in range(0, len(value) - 1):
-                        querySet = model.objects.filter(date__eq=value[0].strftime(__timeprofiler), interval__eq = key)
+                        querySet = model.objects.filter(date__eq=value[i], interval__eq = key)
                         nosql_error_list.append(querySet.timeout(None).values_list(*fields))
             for key, value in day_time_range.iteritems():
-                querySet = model.objects.filter(date__eq=value[0].strftime(__timeprofiler), interval__eq = key)
-                __restrictToInterval(querySet, value[0].strftime(__timeprofiler), value[1].strftime(__timeprofiler))
+                querySet = model.objects.filter(date__eq=value[0], interval__eq = key)
+                __restrictToInterval(querySet, value[0], value[1])
                 nosql_error_list.append(querySet.timeout(None).values_list(*fields))
             ###############################
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
