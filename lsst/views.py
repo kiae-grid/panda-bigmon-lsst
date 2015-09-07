@@ -3994,12 +3994,13 @@ def errorSummary(request):
     ranged_query = False
     if nosql:
         (start, stop) = query['modificationtime__range']
-        __timeprofiler = "%Y-%m-%d %H:%M:%SZ"
-        intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(datetime.strptime(start, __timeprofiler), datetime.strptime(stop, __timeprofiler))
+        #__timeprofiler = "%Y-%m-%d %H:%M:%SZ"
+        # intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(datetime.strptime(start, __timeprofiler), datetime.strptime(stop, __timeprofiler))
         dates = __makeDateRange(start, stop, None)
         fmt = defaultDatetimeFormat
         start = __str2datetime(start, fmt)
         stop = __str2datetime(stop, fmt)
+        intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(start, stop)        
         ranged_query = not (__isMidnight(start) and __isMidnight(stop))
 
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
