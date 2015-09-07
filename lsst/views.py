@@ -4049,10 +4049,10 @@ def errorSummary(request):
                 if (len(value) > 0):
                     for i in range(0, len(value)):
                         querySet = model.objects.filter(date__eq=value[i], interval__eq = key)
-                        nosql_error_list.append(list(querySet.timeout(None).values_list(*fields)))
+                        nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
             for key, value in day_time_range.iteritems():
                 querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key), value[0], value[1])
-                nosql_error_list.append(list(querySet.timeout(None).values_list(*fields)))
+                nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))                                                                  
             ###############################
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
