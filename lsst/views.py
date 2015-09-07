@@ -3943,7 +3943,7 @@ def errorSummary(request):
     nosql = 'nosql' in requestParams
     if nosql:
         nosql_type = requestParams['nosql']
-        from core.pandajob.cassandra_models import day_site_errors_cnt
+        from core.pandajob.cassandra_models import day_site_errors_cnt, day_errors_30m
         from core.pandajob.cassandra_models import jobs as nosql_jobs
         from lsst.cassandra_helpers import connectToCassandra, cqlValuesDict
 
