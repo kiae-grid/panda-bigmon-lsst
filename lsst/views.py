@@ -3873,17 +3873,17 @@ def __getDateTimeIntervals(start, stop):
     
     entry_point = start
     for i in range(0, intervals_diff.get('1Y')):
-        entry_point = entry_point + relativedelta(years=+1)
         date_entries.get('1Y').append(entry_point)
+        entry_point = entry_point + relativedelta(years=+1)
     for i in range(0, intervals_diff.get('1M')):
-        entry_point = entry_point + relativedelta(months=+1)
         date_entries.get('1M').append(entry_point)
+        entry_point = entry_point + relativedelta(months=+1)
     for i in range(0, intervals_diff.get('10d')):
-        entry_point = entry_point + relativedelta(days=+10)
         date_entries.get('10d').append(entry_point)
+        entry_point = entry_point + relativedelta(days=+10)
     for i in range(0, intervals_diff.get('1d')):
-        entry_point = entry_point + relativedelta(days=+1)
         date_entries.get('1d').append(entry_point)
+        entry_point = entry_point + relativedelta(days=+1)
     
     day_time_range.get('30m').append(entry_point)
     day_time_range.get('30m').append(entry_point + relativedelta(minutes=+(30*intervals_diff.get('30m'))))
@@ -4047,7 +4047,7 @@ def errorSummary(request):
             ###############################
             for key, value in date_entries.iteritems():
                 if (len(value) > 0):
-                    for i in range(0, len(value) - 1):
+                    for i in range(0, len(value)):
                         querySet = model.objects.filter(date__eq=value[i], interval__eq = key)
                         nosql_error_list.append(querySet.timeout(None).values_list(*fields))
             for key, value in day_time_range.iteritems():
