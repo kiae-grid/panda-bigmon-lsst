@@ -3995,7 +3995,7 @@ def errorSummary(request):
     ranged_query = False
     if nosql:
         (start, stop) = query['modificationtime__range']
-        __timeprofiler = "%Y-%m-%dT%H:%M:%SZ"
+        __timeprofiler = "%Y-%m-%d %H:%M:%SZ"
         intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(datetime.strptime(stop, __timeprofiler), datetime.strptime(start, __timeprofiler))
         dates = __makeDateRange(start, stop, None)
         fmt = defaultDatetimeFormat
