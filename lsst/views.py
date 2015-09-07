@@ -51,6 +51,7 @@ from lsst.time_profilers import TimeProfiler, TimerlikeCount
 
 from settings.local import dbaccess, LOG_ROOT
 import ErrorCodes
+from dateutil.relativedelta import relativedelta
 
 errorFields = []
 errorCodes = {}
@@ -3846,6 +3847,51 @@ def __makeTimeProfilerConf(view, generation, request):
 
     return (os.path.join(LOG_ROOT, filename), metadata)
 
+def __getDateTimeIntervals(start, stop):
+    minutes_counter = relativedelta(stop, start).minutes
+    if minutes_counter >= 30 : minutes_counter -= 30
+    
+    intervals_diff = {'1Y' : relativedelta(stop, start).years, 
+                  '1M' : relativedelta(stop, start).months,
+                  '1d' : relativedelta(stop, start).days - relativedelta(stop, start).days / 10, 
+                  '10d' : relativedelta(stop, start).days / 10, 
+                  '30m' : relativedelta(stop, start).hours * 2 + relativedelta(stop, start).minutes / 30,
+                  '1m' : minutes_counter}
+    
+    print intervals_diff
+    
+    date_entries = {'1Y' : [],
+                    '1M' : [],
+                    '10d' : [],
+                    '1d' : []}
+    
+    day_time_range = { '30m' : [],
+                    '1m' : []
+                  }
+    
+    job_errors = []
+    
+    entry_point = start
+    for i in range(0, intervals_diff.get('1Y')):
+        entry_point = entry_point + relativedelta(years=+1)
+        date_entries.get('1Y').append(entry_point)
+    for i in range(0, intervals_diff.get('1M')):
+        entry_point = entry_point + relativedelta(months=+1)
+        date_entries.get('1M').append(entry_point)
+    for i in range(0, intervals_diff.get('10d')):
+        entry_point = entry_point + relativedelta(days=+10)
+        date_entries.get('10d').append(entry_point)
+    for i in range(0, intervals_diff.get('1d')):
+        entry_point = entry_point + relativedelta(days=+1)
+        date_entries.get('1d').append(entry_point)
+    
+    day_time_range.get('30m').append(entry_point)
+    day_time_range.get('30m').append(entry_point + relativedelta(minutes=+(30*intervals_diff.get('30m'))))
+    day_time_range.get('1m').append(entry_point)
+    day_time_range.get('1m').append(entry_point + relativedelta(minutes=+intervals_diff.get('1m')))
+    
+ #   return {'intervals_diff' : intervals_diff, 'date_entries' : date_entries, 'day_time_range' : day_time_range }
+    return intervals_diff, date_entries, day_time_range
 
 def errorSummary(request):
     global dbaccess
@@ -3897,8 +3943,7 @@ def errorSummary(request):
     nosql = 'nosql' in requestParams
     if nosql:
         nosql_type = requestParams['nosql']
-        from core.pandajob.cassandra_models import day_site_errors, day_errors_30m
-        from core.pandajob.cassandra_models import day_site_errors_cnt_30m, day_mtime_site_errors_cnt_30m
+        from core.pandajob.cassandra_models import day_site_errors_cnt
         from core.pandajob.cassandra_models import jobs as nosql_jobs
         from lsst.cassandra_helpers import connectToCassandra, cqlValuesDict
 
@@ -3908,17 +3953,8 @@ def errorSummary(request):
         connectToCassandra(dbaccess, sectionName = keyspace)
 
         nosql_summary_processors = {
-          'day_site_errors': {
-            'model': day_site_errors,
-            'handler': __nosqlDaySiteErrors,
-            'jobcount': __nosqlDaySiteErrorsJobcount,
-            'base_mtime range query?': False,
-            'fields': [
-              'computingsite', 'errcode', 'diag', 'pandaid'
-            ],
-          },
-          'day_site_errors_cnt_30m': {
-            'model': day_site_errors_cnt_30m,
+          'day_site_errors_cnt': {
+            'model': day_site_errors_cnt,
             'handler': __nosqlDaySiteErrorsCnt,
             'jobcount': __nosqlDaySiteErrorsCntJobcount,
             'base_mtime range query?': False,
@@ -3968,6 +4004,7 @@ def errorSummary(request):
     ranged_query = False
     if nosql:
         (start, stop) = query['modificationtime__range']
+        intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(start, stop)
         dates = __makeDateRange(start, stop, None)
         fmt = defaultDatetimeFormat
         start = __str2datetime(start, fmt)
@@ -4015,15 +4052,27 @@ def errorSummary(request):
 
             fields = processor['fields']
             model = processor['model']
-            querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
-            if ranged_query:
-                if processor['base_mtime range query?']:
-                    querySet = __restrictToInterval(querySet, start, stop)
-                else:
-                    raise RuntimeError("Programming error: "
-                      "unhandled ranged query for model '%s'" % (nosql_type))
-            nosql_error_list = \
-              list(querySet.timeout(None).values_list(*fields))
+            nosql_error_list = []
+            ###############################
+            for key, value in date_entries.iteritems():
+                if (len(value) > 0):
+                    for i in range(0, len(value) - 1):
+                        querySet = model.objects.filter(date__eq=value[0].strftime("%Y-%m-%d %H:%M:%S"), interval__eq = key)
+                        nosql_error_list.append(querySet.timeout(None).values_list(*fields))
+            for key, value in day_time_range.iteritems():
+                querySet = model.objects.filter(date__eq=value[0].strftime("%Y-%m-%d %H:%M:%S"), interval__eq = key)
+                __restrictToInterval(querySet, value[0].strftime("%Y-%m-%d %H:%M:%S"), value[1].strftime("%Y-%m-%d %H:%M:%S"))
+                nosql_error_list.append(querySet.timeout(None).values_list(*fields))
+            ###############################
+#             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
+#             if ranged_query:
+#                 if processor['base_mtime range query?']:
+#                     querySet = __restrictToInterval(querySet, start, stop)
+#                 else:
+#                     raise RuntimeError("Programming error: "
+#                       "unhandled ranged query for model '%s'" % (nosql_type))
+#             nosql_error_list = \
+#               list(querySet.timeout(None).values_list(*fields))
             nosql_returned_rows = len(nosql_error_list)
         else:
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
