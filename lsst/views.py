@@ -3962,15 +3962,15 @@ def errorSummary(request):
               'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
             ],
           },
-          'day_mtime_site_errors_cnt_30m': {
-            'model': day_mtime_site_errors_cnt_30m,
-            'handler': __nosqlDaySiteErrorsCnt,
-            'jobcount': __nosqlDaySiteErrorsCntJobcount,
-            'base_mtime range query?': True,
-            'fields': [
-              'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
-            ],
-          },
+#           'day_mtime_site_errors_cnt_30m': {
+#             'model': day_mtime_site_errors_cnt_30m,
+#             'handler': __nosqlDaySiteErrorsCnt,
+#             'jobcount': __nosqlDaySiteErrorsCntJobcount,
+#             'base_mtime range query?': True,
+#             'fields': [
+#               'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
+#             ],
+#           },
         }
 
     testjobs = False
