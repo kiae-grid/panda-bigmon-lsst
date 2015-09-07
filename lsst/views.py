@@ -3994,8 +3994,6 @@ def errorSummary(request):
     ranged_query = False
     if nosql:
         (start, stop) = query['modificationtime__range']
-        #__timeprofiler = "%Y-%m-%d %H:%M:%SZ"
-        # intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(datetime.strptime(start, __timeprofiler), datetime.strptime(stop, __timeprofiler))
         dates = __makeDateRange(start, stop, None)
         fmt = defaultDatetimeFormat
         start = __str2datetime(start, fmt)
@@ -4213,6 +4211,7 @@ def errorSummary(request):
         nosorturl = removeParam(request.get_full_path(), 'sortby')
         xurl = extensibleURL(request)
         jobsurl = xurl.replace('/errors/','/jobs/')
+        (tf, tl) = query['modificationtime__range']
         data = {
             'prefix': getPrefix(request),
             'request' : request,
@@ -4233,8 +4232,8 @@ def errorSummary(request):
             'errsByTask' : errsByTask,
             'sumd' : sumd,
             'errHist' : errHist,
-            'tfirst' : TFIRST,
-            'tlast' : TLAST,
+            'tfirst' : tf,
+            'tlast' : tl,
             'sortby' : sortby,
             'taskname' : taskname,
             'flowstruct' : flowstruct,
