@@ -3853,7 +3853,7 @@ def __getDateTimeIntervals(start, stop):
     
     intervals_diff = {'1Y' : relativedelta(stop, start).years, 
                   '1M' : relativedelta(stop, start).months,
-                  '1d' : relativedelta(stop, start).days - relativedelta(stop, start).days / 10, 
+                  '1d' : relativedelta(end_date, start_date).days - (relativedelta(end_date, start_date).days / 10) * 10, 
                   '10d' : relativedelta(stop, start).days / 10, 
                   '30m' : relativedelta(stop, start).hours * 2 + relativedelta(stop, start).minutes / 30,
                   '1m' : minutes_counter}
