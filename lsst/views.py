@@ -3851,11 +3851,11 @@ def __getDateTimeIntervals(start, stop):
     minutes_counter = relativedelta(stop, start).minutes
     if minutes_counter >= 30 : minutes_counter -= 30
     
-    intervals_diff = {'1Y' : relativedelta(start, stop).years, 
-                  '1M' : relativedelta(start, stop).months,
-                  '1d' : relativedelta(start, stop).days - (relativedelta(start, stop).days / 10) * 10, 
-                  '10d' : relativedelta(start, stop).days / 10, 
-                  '30m' : relativedelta(start, stop).hours * 2 + relativedelta(start, stop).minutes / 30,
+    intervals_diff = {'1Y' : relativedelta(stop, start).years, 
+                  '1M' : relativedelta(stop, start).months,
+                  '1d' : relativedelta(stop, start).days - (relativedelta(stop, start).days / 10) * 10, 
+                  '10d' : relativedelta(stop, start).days / 10, 
+                  '30m' : relativedelta(stop, start).hours * 2 + relativedelta(stop, start).minutes / 30,
                   '1m' : minutes_counter}
     
     print intervals_diff
@@ -3890,7 +3890,6 @@ def __getDateTimeIntervals(start, stop):
     day_time_range.get('1m').append(entry_point)
     day_time_range.get('1m').append(entry_point + relativedelta(minutes=+intervals_diff.get('1m')))
     
- #   return {'intervals_diff' : intervals_diff, 'date_entries' : date_entries, 'day_time_range' : day_time_range }
     return intervals_diff, date_entries, day_time_range
 
 def errorSummary(request):
