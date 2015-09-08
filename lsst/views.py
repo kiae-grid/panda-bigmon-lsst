@@ -171,32 +171,6 @@ def __makeDateRange(start, stop, out_fmt):
 
     return retval
 
-
-def __makeDateRangeForInterval(start, stop, out_fmt, interval_str):
-
-    retval = []
-
-    in_fmt = defaultDatetimeFormat
-    d1 = __str2datetime(start, in_fmt)
-    d2 = __str2datetime(stop, in_fmt)
-    if (interval_str == '1d'):
-        interval = timedelta(days = 1)
-    if (interval_str == '10d'):
-        interval = timedelta(days = 10)
-    if (interval_str == '1Y'):
-        interval = timedelta(days = 365)
-    if (interval_str == '1M'):
-        interval = timedelta(weeks = 4)
-    date = datetime(d1.year, d1.month, d1.day, 0, 0, 0, 0, d1.tzinfo)
-    while date < d2:
-        retval.append(date)
-        date += interval
-
-    if out_fmt != None:
-        retval = map(lambda x: x.strftime(out_fmt), retval)
-
-    return retval
-
 def __sliceDateRange(start, stop, out_fmt, step = 1):
     """
     Creates tuples that will hold semi-open intervals
@@ -4021,12 +3995,12 @@ def errorSummary(request):
         (start, stop) = query['modificationtime__range']
         interval = requestParams['interval']
         intervals = {'1d': 1, '1M': 30, '10d': 10, '1Y': 365}
-        if (intervals.has_key(interval)):
-            dates_for_interval = __sliceDateRange(start, stop, None, step = intervals.get(interval))
-        elif interval in ['30m','1m']:
-            dates_for_interval = __sliceDateRange(start, stop, None, step = 1)
         dates = __makeDateRange(start, stop, None)
         fmt = defaultDatetimeFormat
+        if (intervals.has_key(interval)):
+            dates_for_interval = __sliceDateRange(start, stop, fmt, step = intervals.get(interval))
+        elif interval in ['30m','1m']:
+            dates_for_interval = __sliceDateRange(start, stop, fmt, step = 1)
         start = __str2datetime(start, fmt)
         stop = __str2datetime(stop, fmt)
         intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(start, stop)        
@@ -4093,7 +4067,7 @@ def errorSummary(request):
                     errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
             elif interval in ['30m','1m']:
                 for item in dates_for_interval:
-                    querySet = __restrictToInterval(model.objects.filter(date__eq=item, interval__eq = interval))
+                    querySet = __restrictToInterval(model.objects.filter(date__eq=__str2datetime(item, fmt), interval__eq = interval))
                     errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))                                             
 
             _t_hist.start()
