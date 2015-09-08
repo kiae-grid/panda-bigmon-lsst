@@ -3632,7 +3632,7 @@ def errorHistogramInterval(ehList):
     errHist = {}
     for item in ehList:
         if not item[0] in errHist.iterkeys(): errHist[item[0]] = 0
-        errHist[item[0]] += 1
+        errHist[item[0]] += item[1]
 
     retval = []
     for k in sorted(errHist.keys()):
