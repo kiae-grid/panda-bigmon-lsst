@@ -172,6 +172,31 @@ def __makeDateRange(start, stop, out_fmt):
     return retval
 
 
+def __makeDateRangeForInterval(start, stop, out_fmt, interval_str):
+
+    retval = []
+
+    in_fmt = defaultDatetimeFormat
+    d1 = __str2datetime(start, in_fmt)
+    d2 = __str2datetime(stop, in_fmt)
+    if (interval_str == '1d'):
+        interval = timedelta(days = 1)
+    if (interval_str == '10d'):
+        interval = timedelta(days = 10)
+    if (interval_str == '1Y'):
+        interval = timedelta(days = 365)
+    if (interval_str == '1M'):
+        interval = timedelta(weeks = 4)
+    date = datetime(d1.year, d1.month, d1.day, 0, 0, 0, 0, d1.tzinfo)
+    while date < d2:
+        retval.append(date)
+        date += interval
+
+    if out_fmt != None:
+        retval = map(lambda x: x.strftime(out_fmt), retval)
+
+    return retval
+
 def __sliceDateRange(start, stop, out_fmt, step = 1):
     """
     Creates tuples that will hold semi-open intervals
@@ -4053,8 +4078,19 @@ def errorSummary(request):
                 querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key), value[0], value[1])
                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))                                                                  
             ###############################
-            
-            errHist = list(querySet.timeout(None).values_list('base_mtime', 'err_count'))
+            errHist = []
+            interval = '1d'
+            if interval in ['1d','1M','10d','1Y'] : 
+                dates_for_interval = __sliceDateRange(start, stop, None, 1)
+                for item in dates_for_interval:
+                    querySet = model.objects.filter(date__eq=item, interval__eq = interval)
+                    errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
+            elif interval in ['30m','1m']:
+                dates_for_interval = __sliceDateRange(start, stop, None, 1)
+                for i in range(0, len(dates_for_interval)):
+                    querySet = __restrictToInterval(model.objects.filter(date__eq=item, interval__eq = interval), dates_for_interval[i], dates_for_interval[i+1])
+                    errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))                                             
+
             _t_hist.start()
             errHist = errorHistogram(errJobs, errHist)
             _t_hist.stop()            
