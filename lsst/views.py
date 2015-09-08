@@ -4059,15 +4059,13 @@ def errorSummary(request):
                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))                                                                  
             ###############################
             errHist = []
-           
-            interval = '1d'
             if interval in ['1d','1M','10d','1Y']: 
                 for item in dates_for_interval:
-                    querySet = model.objects.filter(date__eq=__str2datetime(item, fmt), interval__eq = interval)
+                    querySet = model.objects.filter(date__eq=item, interval__eq = interval)
                     errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
             elif interval in ['30m','1m']:
                 for item in dates_for_interval:
-                    querySet = __restrictToInterval(model.objects.filter(date__eq=__str2datetime(item, fmt), interval__eq = interval))
+                    querySet = __restrictToInterval(model.objects.filter(date__eq=item, interval__eq = interval))
                     errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))                                             
 
             _t_hist.start()
