@@ -4020,8 +4020,9 @@ def errorSummary(request):
     if nosql:
         (start, stop) = query['modificationtime__range']
         interval = requestParams['interval']
-        if interval in ['1d','1M','10d','1Y']: 
-            dates_for_interval = __sliceDateRange(start, stop, None, step = interval)
+        intervals = {'1d': 1, '1M': 30, '10d': 10, '1Y': 365}
+        if (intervals.has_key(interval)):
+            dates_for_interval = __sliceDateRange(start, stop, None, step = intervals.get(interval))
         elif interval in ['30m','1m']:
             dates_for_interval = __sliceDateRange(start, stop, None, step = 1)
         dates = __makeDateRange(start, stop, None)
