@@ -4019,6 +4019,7 @@ def errorSummary(request):
     ranged_query = False
     if nosql:
         (start, stop) = query['modificationtime__range']
+        dates_for_interval = __sliceDateRange(start, stop, None, step = 1)
         dates = __makeDateRange(start, stop, None)
         fmt = defaultDatetimeFormat
         start = __str2datetime(start, fmt)
@@ -4080,13 +4081,11 @@ def errorSummary(request):
             ###############################
             errHist = []
             interval = '1d'
-            if interval in ['1d','1M','10d','1Y'] : 
-                dates_for_interval = __sliceDateRange(start, stop, None, step = 1)
+            if interval in ['1d','1M','10d','1Y']: 
                 for item in dates_for_interval:
                     querySet = model.objects.filter(date__eq=item, interval__eq = interval)
                     errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
             elif interval in ['30m','1m']:
-                dates_for_interval = __sliceDateRange(start, stop, None, 1)
                 for i in range(0, len(dates_for_interval)):
                     querySet = __restrictToInterval(model.objects.filter(date__eq=item, interval__eq = interval), dates_for_interval[i], dates_for_interval[i+1])
                     errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))                                             
