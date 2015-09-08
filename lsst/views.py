@@ -3628,6 +3628,17 @@ def errorHistogram(errJobs, ehList):
 
     return retval
 
+def errorHistogramInterval(ehList):
+    errHist = {}
+    for item in ehList:
+        if not item[0] in errHist.iterkeys(): errHist[item[0]] = 0
+        errHist[item[0]] += 1
+
+    retval = []
+    for k in sorted(errHist.keys()):
+        retval.append([k, errHist[k]])
+
+    return retval
 
 def __nosqlDaySiteErrors(error_list):
     """
@@ -4059,7 +4070,7 @@ def errorSummary(request):
                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))                                                                  
             ###############################
             errHist = []
-#             if interval in ['1d','1M','10d','1Y']: 
+#           if interval in ['1d','1M','10d','1Y']: 
             for item in dates_for_interval:
                 querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval)
                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
@@ -4068,9 +4079,9 @@ def errorSummary(request):
 #                     querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval)
 #                     errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))                                             
 
-#             _t_hist.start()
-#             errHist = errorHistogram(errJobs, errHist)
-#             _t_hist.stop()            
+            _t_hist.start()
+            errHist = errorHistogramInterval(errHist)
+            _t_hist.stop()            
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
 #                 if processor['base_mtime range query?']:
