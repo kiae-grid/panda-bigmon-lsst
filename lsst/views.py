@@ -4053,6 +4053,11 @@ def errorSummary(request):
                 querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key), value[0], value[1])
                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))                                                                  
             ###############################
+            
+            errHist = list(querySet.timeout(None).values_list('base_mtime', 'err_count'))
+            _t_hist.start()
+            errHist = errorHistogram(errJobs, errHist)
+            _t_hist.stop()            
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
 #                 if processor['base_mtime range query?']:
@@ -4066,17 +4071,17 @@ def errorSummary(request):
         else:
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
 
-        # Get data for histogram
-        _t_hist.start()
-        querySet = day_errors_30m.objects.filter(date__in=dates)
-        if ranged_query:
-            querySet = __restrictToInterval(querySet, start, stop)
-        errHist = list(querySet.timeout(None).values_list('base_mtime', 'count'))
-        _t_hist.stop()
-        # Append histogram data from non-historic tables
-        _t_hist.start()
-        errHist = errorHistogram(errJobs, errHist)
-        _t_hist.stop()
+#         # Get data for histogram
+#         _t_hist.start()
+#         querySet = day_errors_30m.objects.filter(date__in=dates)
+#         if ranged_query:
+#             querySet = __restrictToInterval(querySet, start, stop)
+#         errHist = list(querySet.timeout(None).values_list('base_mtime', 'count'))
+#         _t_hist.stop()
+#         # Append histogram data from non-historic tables
+#         _t_hist.start()
+#         errHist = errorHistogram(errJobs, errHist)
+#         _t_hist.stop()
 
         # Signal the below code that we don't need histogram
         # calculations: we had already joined NoSQL and SQL parts
