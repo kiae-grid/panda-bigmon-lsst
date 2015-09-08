@@ -4081,7 +4081,7 @@ def errorSummary(request):
             errHist = []
             interval = '1d'
             if interval in ['1d','1M','10d','1Y'] : 
-                dates_for_interval = __sliceDateRange(start, stop, None, 1)
+                dates_for_interval = __sliceDateRange(start, stop, None, step = 1)
                 for item in dates_for_interval:
                     querySet = model.objects.filter(date__eq=item, interval__eq = interval)
                     errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
