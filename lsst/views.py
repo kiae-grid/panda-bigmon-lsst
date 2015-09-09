@@ -3629,6 +3629,13 @@ def errorHistogram(errJobs, ehList):
     return retval
 
 def errorHistogramInterval(ehList):
+    """
+    Builds error histogram array
+
+    Arguments:
+     - ehList: already existing parts of the histogram
+       or None.
+    """
     errHist = {}
     for item in ehList:
         if not item[0] in errHist.iterkeys(): errHist[item[0]] = 0
@@ -3858,6 +3865,22 @@ def __makeTimeProfilerConf(view, generation, request):
     return (os.path.join(LOG_ROOT, filename), metadata)
 
 def __getDateTimeIntervals(start, stop):
+    """
+    Using dateutil library to compute the relative deltas between two given dates
+    
+    input: start <date_from>, stop <date_to>
+    
+    output: 
+    1) intervals_diff - dictionary, which holds the deltas for each interval
+                        (1Y - year, 1M - month, 1d - day, 10d - 10 days, 30m - 30 minutes, 1m - 1 minute)
+    2) date_entries - dictionary, which holds the start points for each interval
+                      (for example, if the time delta between two dates is 7 days, then
+                      we have to make a query to 7 partitions (for each day) dy '1d' interval,
+                      entry point determines WHERE clause in the query [WHERE date = <entry_point>], 
+                      so for date_entries we generate keys for these 7 days)
+    3) day_time_range - dictionary for the time intervals within 1 day
+    """
+    
     minutes_counter = relativedelta(stop, start).minutes
     if minutes_counter >= 30 : minutes_counter -= 30
     
@@ -3867,9 +3890,7 @@ def __getDateTimeIntervals(start, stop):
                   '10d' : relativedelta(stop, start).days / 10, 
                   '30m' : relativedelta(stop, start).hours * 2 + relativedelta(stop, start).minutes / 30,
                   '1m' : minutes_counter}
-    
-    print intervals_diff
-    
+   
     date_entries = {'1Y' : [],
                     '1M' : [],
                     '10d' : [],
@@ -3878,8 +3899,6 @@ def __getDateTimeIntervals(start, stop):
     day_time_range = { '30m' : [],
                     '1m' : []
                   }
-    
-    job_errors = []
     
     entry_point = start
     for i in range(0, intervals_diff.get('1Y')):
@@ -4004,17 +4023,33 @@ def errorSummary(request):
     ranged_query = False
     if nosql:
         (start, stop) = query['modificationtime__range']
+        """
+            Added new request parameter 'interval' for the error's historgam
+            We can specify the interval [1Y, 1M, 10d, 1d, 30m, 1m] 
+            for which to build historgam
+        """
         interval = requestParams['interval']
-        intervals = {'1d': 1, '1M': 30, '10d': 10, '1Y': 365}
+       
         dates = __makeDateRange(start, stop, None)
         fmt = defaultDatetimeFormat
+        
+        intervals = {'1d': 1, '1M': 30, '10d': 10, '1Y': 365}  
+        """
+            dates_for_interval dictionary: 
+                date ranges for the specific interval
+        """       
         if (intervals.has_key(interval)):
             dates_for_interval = __sliceDateRange(start, stop, fmt, step = intervals.get(interval))
         elif interval in ['30m','1m']:
             dates_for_interval = __sliceDateRange(start, stop, fmt, step = 1)
+            
         start = __str2datetime(start, fmt)
         stop = __str2datetime(stop, fmt)
+        """
+            Get intervals dictionaries for date slice
+        """
         intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(start, stop)        
+        
         ranged_query = not (__isMidnight(start) and __isMidnight(stop))
 
     if not testjobs: query['jobstatus__in'] = [ 'failed', 'holding' ]
@@ -4059,7 +4094,12 @@ def errorSummary(request):
             fields = processor['fields']
             model = processor['model']
             nosql_error_list = []
-            ###############################
+            """
+            Get data for error summary from <day_site_errors_cnt> datatable. 
+            - Using date_entries dict to built multi-get request 
+            if we have to address to more than one partition - (date,interval)
+            - Using dates_for_interval to get time slice within one day (onme partition) 
+            """
             for key, value in date_entries.iteritems():
                 if (len(value) > 0):
                     for i in range(0, len(value)):
@@ -4068,16 +4108,16 @@ def errorSummary(request):
             for key, value in day_time_range.iteritems():
                 querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key), value[0], value[1])
                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))                                                                  
-            ###############################
+
+            """
+            Building dictionary for error's histogram
+            using date_for_interval dictionary.
+            Multi-get request to <day_site_errors_cnt> datatable.
+            """
             errHist = []
-#           if interval in ['1d','1M','10d','1Y']: 
             for item in dates_for_interval:
                 querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval)
                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
-#             elif interval in ['30m','1m']:
-#                 for item in dates_for_interval:
-#                     querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval)
-#                     errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))                                             
 
             _t_hist.start()
             errHist = errorHistogramInterval(errHist)
