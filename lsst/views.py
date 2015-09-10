@@ -4120,6 +4120,8 @@ def errorSummary(request):
                 querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval)
                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
             _t_hist.stop()
+            
+            nosql_hist_count = len(errHist)
             errHist = errorHistogramInterval(errHist)
            
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
@@ -4151,7 +4153,6 @@ def errorSummary(request):
         # calculations: we had already joined NoSQL and SQL parts
         errHistIsDone = True
 
-        nosql_hist_count = len(errHist)
     else:
         if 'datesliced' in requestParams:
             try:
