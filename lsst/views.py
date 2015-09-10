@@ -4121,7 +4121,7 @@ def errorSummary(request):
                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
             _t_hist.stop()
             
-            # errHist = errorHistogramInterval(errHist)
+            errHist = errorHistogramInterval(errHist)
            
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
