@@ -4103,7 +4103,7 @@ def errorSummary(request):
             for key, value in date_entries.iteritems():
                 if (len(value) > 0):
                     for i in range(0, len(value)):
-                        querySet = model.objects.filter(date__eq=value[i], interval__eq = key).limit(JOB_LIMIT)
+                        querySet = model.objects.filter(date__eq=value[i], interval__eq = key)
                         nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
             for key, value in day_time_range.iteritems():
                 querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key), value[0], value[1])
@@ -4117,7 +4117,7 @@ def errorSummary(request):
             errHist = []
             _t_hist.start()
             for item in dates_for_interval:
-                querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval).limit(JOB_LIMIT)
+                querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval)
                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
             _t_hist.stop()
             
