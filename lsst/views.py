@@ -4121,8 +4121,7 @@ def errorSummary(request):
                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
             _t_hist.stop()
             
-            nosql_hist_count = len(errHist)
-            errHist = errorHistogramInterval(errHist)
+            # errHist = errorHistogramInterval(errHist)
            
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
@@ -4148,7 +4147,7 @@ def errorSummary(request):
 #         _t_hist.start()
 #         errHist = errorHistogram(errJobs, errHist)
 #         _t_hist.stop()
-
+        nosql_hist_count = len(errHist)
         # Signal the below code that we don't need histogram
         # calculations: we had already joined NoSQL and SQL parts
         errHistIsDone = True
