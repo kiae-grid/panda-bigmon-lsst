@@ -4115,13 +4115,13 @@ def errorSummary(request):
             Multi-get request to <day_site_errors_cnt> datatable.
             """
             errHist = []
+            _t_hist.start()
             for item in dates_for_interval:
                 querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval)
                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
-
-            _t_hist.start()
+            _t_hist.stop()
             errHist = errorHistogramInterval(errHist)
-            _t_hist.stop()            
+           
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
 #                 if processor['base_mtime range query?']:
