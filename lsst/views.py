@@ -4066,7 +4066,6 @@ def errorSummary(request):
     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-    _t_archived_jobs.start()
     # The below code assumes that at this point jobs will contain all
     # non-historic (non-archived) data, so, please, don't break this.
 
@@ -4100,6 +4099,7 @@ def errorSummary(request):
             if we have to address to more than one partition - (date,interval)
             - Using dates_for_interval to get time slice within one day (onme partition) 
             """
+            _t_archived_jobs.start()
             for key, value in date_entries.iteritems():
                 if (len(value) > 0):
                     for i in range(0, len(value)):
@@ -4108,7 +4108,7 @@ def errorSummary(request):
             for key, value in day_time_range.iteritems():
                 querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key), value[0], value[1])
                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))                                                                  
-
+            _t_archived_jobs.stop()
             """
             Building dictionary for error's histogram
             using date_for_interval dictionary.
@@ -4175,7 +4175,6 @@ def errorSummary(request):
             _logger.debug("Doing jobsarchived query")
             jobs.extend(Jobsarchived.objects.filter(**query)[:JOB_LIMIT].values(*values))
             _logger.debug("Done!")
-    _t_archived_jobs.stop()
     _t_jobs.stop()
 
     # Pre-processed error tables from NoSQL need special handling
