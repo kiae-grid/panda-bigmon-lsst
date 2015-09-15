@@ -4139,7 +4139,7 @@ def errorSummary(request):
             nosql_hist_count = len(errHist)
             _t_hist_processing.start()
             errHist = errorHistogramInterval(errHist)
-            _t_t_hist_processing.stop()
+            _t_hist_processing.stop()
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
 #                 if processor['base_mtime range query?']:
