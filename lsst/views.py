@@ -4079,9 +4079,9 @@ def errorSummary(request):
     errHistIsDone = False
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
     _t_jobs.start()
-    jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-    jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-    jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+#     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+#     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+#     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     # The below code assumes that at this point jobs will contain all
     # non-historic (non-archived) data, so, please, don't break this.
 
