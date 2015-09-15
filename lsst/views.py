@@ -3958,6 +3958,14 @@ def errorSummary(request):
     _time_profiler.add(_t_jobs, info = "job selection from DB")
     _t_archived_jobs = ProfilingTimer("archived_jobs_DBquery")
     _time_profiler.add(_t_archived_jobs, info = "archived job selection from DB")
+    _t_errors_10d = ProfilingTimer("day_site_errors_cnt_10d")
+    _time_profiler.add(_t_errors_10d, info = "get data from day_site_errors_cnt by 10 days intervals")
+    _t_errors_1d = ProfilingTimer("day_site_errors_cnt_1d")
+    _time_profiler.add(_t_errors_1d, info = "get data from day_site_errors_cnt by 1 days intervals")
+    _t_errors_30m = ProfilingTimer("day_site_errors_cnt_30m")
+    _time_profiler.add(_t_errors_30m, info = "get data from day_site_errors_cnt by 30 minutes intervals")
+    _t_errors_1m = ProfilingTimer("day_site_errors_cnt_1m")
+    _time_profiler.add(_t_errors_1m, info = "get data from day_site_errors_cnt by 1 minute intervals")
     _t_hist = ProfilingTimer("histogram_DBquery")
     _time_profiler.add(_t_hist, info = "creation of error count timeline histogram")
     _t_hist_processing = ProfilingTimer("histogram_processing")
@@ -4117,14 +4125,22 @@ def errorSummary(request):
             """
             _t_archived_jobs.start()
             for key, value in date_entries.iteritems():
+                if key == '10d': _t_errors_10d.start()
+                elif key == '1d' : _t_errors_1d.start()
                 if (len(value) > 0):
                     for i in range(0, len(value)):
-                        querySet = model.objects.filter(date__eq=value[i], interval__eq = key)
+                        querySet = model.objects.filter(date__eq=value[i], interval__eq = key).limit(JOB_LIMIT)
                         nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
+                _t_errors_10d.stop()
+                _t_errors_1d.stop()
             for key, value in day_time_range.iteritems():
-                querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key), value[0], value[1])
+                if key == '30m' : _t_errors_30m.start()
+                elif key == '1m' : _t_errors_1m.start()
+                querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key).limit(JOB_LIMIT), value[0], value[1])
                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))                                                                  
             _t_archived_jobs.stop()
+            _t_errors_30m.stop()
+            _t_errors_1m.stop()
             """
             Building dictionary for error's histogram
             using date_for_interval dictionary.
@@ -4133,7 +4149,7 @@ def errorSummary(request):
             errHist = []
             _t_hist.start()
             for item in dates_for_interval:
-                querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval)
+                querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval).limit(JOB_LIMIT)
                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
             _t_hist.stop()
             nosql_hist_count = len(errHist)
