@@ -4126,21 +4126,22 @@ def errorSummary(request):
             _t_archived_jobs.start()
             for key, value in date_entries.iteritems():
                 if key == '10d': _t_errors_10d.start()
-                elif key == '1d' : _t_errors_1d.start()
+                if key == '1d' : _t_errors_1d.start()
                 if (len(value) > 0):
                     for i in range(0, len(value)):
                         querySet = model.objects.filter(date__eq=value[i], interval__eq = key).limit(JOB_LIMIT)
                         nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
-                _t_errors_10d.stop()
-                _t_errors_1d.stop()
+                if key == '10d' : _t_errors_10d.stop()
+                if key == '1d' : _t_errors_1d.stop()
             for key, value in day_time_range.iteritems():
                 if key == '30m' : _t_errors_30m.start()
-                elif key == '1m' : _t_errors_1m.start()
+                if key == '1m' : _t_errors_1m.start()
                 querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key).limit(JOB_LIMIT), value[0], value[1])
                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))                                                                  
+                if key == '30m' :_t_errors_30m.stop()
+                if key == '1m' : _t_errors_1m.stop()
             _t_archived_jobs.stop()
-            _t_errors_30m.stop()
-            _t_errors_1m.stop()
+
             """
             Building dictionary for error's histogram
             using date_for_interval dictionary.
