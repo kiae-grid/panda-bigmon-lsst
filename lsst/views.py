@@ -3960,6 +3960,8 @@ def errorSummary(request):
     _time_profiler.add(_t_archived_jobs, info = "archived job selection from DB")
     _t_hist = ProfilingTimer("histogram_DBquery")
     _time_profiler.add(_t_hist, info = "creation of error count timeline histogram")
+    _t_hist_processing = ProfilingTimer("histogram_processing")
+    _time_profiler.add(_t_hist_processing, info = "creation of error count timeline histogram_postprocessing")
     _t_jedi_tasks = ProfilingTimer("jedi_tasks_DBquery")
     _time_profiler.add(_t_jedi_tasks, info = "query for JEDI_TASKS table via taskNameDict()")
     _t_job_cleaner = ProfilingTimer("job_cleaner")
@@ -4134,9 +4136,10 @@ def errorSummary(request):
                 querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval)
                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
             _t_hist.stop()
-            
+            nosql_hist_count = len(errHist)
+            _t_hist_processing.start()
             errHist = errorHistogramInterval(errHist)
-           
+            _t_t_hist_processing.stop()
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
 #                 if processor['base_mtime range query?']:
@@ -4161,7 +4164,7 @@ def errorSummary(request):
 #         _t_hist.start()
 #         errHist = errorHistogram(errJobs, errHist)
 #         _t_hist.stop()
-        nosql_hist_count = len(errHist)
+        # nosql_hist_count = len(errHist)
         # Signal the below code that we don't need histogram
         # calculations: we had already joined NoSQL and SQL parts
         errHistIsDone = True
