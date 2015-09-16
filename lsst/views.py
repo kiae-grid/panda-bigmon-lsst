@@ -3960,12 +3960,20 @@ def errorSummary(request):
     _time_profiler.add(_t_archived_jobs, info = "archived job selection from DB")
     _t_errors_10d = ProfilingTimer("day_site_errors_cnt_10d")
     _time_profiler.add(_t_errors_10d, info = "get data from day_site_errors_cnt by 10 days intervals")
+    _cnt_10d = TimerlikeCount("cnt_10d")
+    _time_profiler.add(_cnt_10d, info = "cnt_10d")
     _t_errors_1d = ProfilingTimer("day_site_errors_cnt_1d")
     _time_profiler.add(_t_errors_1d, info = "get data from day_site_errors_cnt by 1 days intervals")
+    _cnt_1d = TimerlikeCount("cnt_1d")
+    _time_profiler.add(_cnt_1d, info = "cnt_1d")
     _t_errors_30m = ProfilingTimer("day_site_errors_cnt_30m")
     _time_profiler.add(_t_errors_30m, info = "get data from day_site_errors_cnt by 30 minutes intervals")
+    _cnt_30m = TimerlikeCount("cnt_30m")
+    _time_profiler.add(_cnt_30m, info = "cnt_30m")
     _t_errors_1m = ProfilingTimer("day_site_errors_cnt_1m")
     _time_profiler.add(_t_errors_1m, info = "get data from day_site_errors_cnt by 1 minute intervals")
+    _cnt_1m = TimerlikeCount("cnt_1m")
+    _time_profiler.add(_cnt_1m, info = "cnt_1m")
     _t_hist = ProfilingTimer("histogram_DBquery")
     _time_profiler.add(_t_hist, info = "creation of error count timeline histogram")
     _t_hist_processing = ProfilingTimer("histogram_processing")
@@ -4087,9 +4095,9 @@ def errorSummary(request):
     errHistIsDone = False
     values = 'produsername', 'pandaid', 'cloud','computingsite','cpuconsumptiontime','jobstatus','transformation','prodsourcelabel','specialhandling','vo','modificationtime', 'atlasrelease', 'jobsetid', 'processingtype', 'workinggroup', 'jeditaskid', 'taskid', 'starttime', 'endtime', 'brokerageerrorcode', 'brokerageerrordiag', 'ddmerrorcode', 'ddmerrordiag', 'exeerrorcode', 'exeerrordiag', 'jobdispatchererrorcode', 'jobdispatchererrordiag', 'piloterrorcode', 'piloterrordiag', 'superrorcode', 'superrordiag', 'taskbuffererrorcode', 'taskbuffererrordiag', 'transexitcode', 'destinationse', 'currentpriority', 'computingelement'
     _t_jobs.start()
-#     jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-#     jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
-#     jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    jobs.extend(Jobsdefined4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    jobs.extend(Jobsactive4.objects.filter(**query)[:JOB_LIMIT].values(*values))
+    jobs.extend(Jobswaiting4.objects.filter(**query)[:JOB_LIMIT].values(*values))
     # The below code assumes that at this point jobs will contain all
     # non-historic (non-archived) data, so, please, don't break this.
 
@@ -4155,7 +4163,8 @@ def errorSummary(request):
             _t_hist.stop()
             nosql_hist_count = len(errHist)
             _t_hist_processing.start()
-            errHist = errorHistogramInterval(errHist)
+            errHist = errorHistogram(errJobs, errHist)
+           # errHist = errorHistogramInterval(errHist)
             _t_hist_processing.stop()
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
