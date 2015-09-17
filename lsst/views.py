@@ -4146,7 +4146,7 @@ def errorSummary(request):
             
             _t_archived_jobs.start()
             for item in entry_points:
-                querySet = __restrictToInterval(model.objects.filter(date__eq=item['date'], interval__eq = item['interval'])).limit(JOB_LIMIT)
+                querySet = __restrictToInterval(model.objects.filter(date__eq=item['date'], interval__eq = item['interval']), start, stop).limit(JOB_LIMIT)
                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
                 if len(nosql_error_list) >= JOB_LIMIT:
                    nosql_error_list = nosql_error_list[:JOB_LIMIT]
