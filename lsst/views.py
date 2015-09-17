@@ -3935,6 +3935,20 @@ def __getDateTimeIntervals(start, stop):
     
     return intervals_diff, date_entries, day_time_range
 
+def __get_interval_entry_points(start, stop):
+    entry_points = []
+    while (relativedelta(end_date, start_date).days >= 10):
+        entry_points.append({'date' : start_date, 'interval' : '10d'})
+        start_date = start_date + relativedelta(days=+10)
+    while (relativedelta(end_date, start_date).days < 10 and relativedelta(end_date, start_date).days >= 1):
+        entry_points.append({'date' : start_date, 'interval' : '1d'})
+        start_date = start_date + relativedelta(days=+1)
+    while (relativedelta(end_date, start_date).days < 1 and relativedelta(end_date, start_date).minutes >= 30):
+        entry_points.append({'date' : start_date, 'interval' : '30m'})
+    if (relativedelta(end_date, start_date).minutes < 30 and relativedelta(end_date, start_date).minutes > 1):
+        entry_points.append({'date' : start_date, 'interval' : '1m'})
+    return entry_points
+
 def errorSummary(request):
     global dbaccess
 
@@ -3964,20 +3978,12 @@ def errorSummary(request):
     _time_profiler.add(_t_static_errors_cnt, info = "number of errors by static intervals")
     _t_errors_10d = ProfilingTimer("day_site_errors_cnt_10d")
     _time_profiler.add(_t_errors_10d, info = "get data from day_site_errors_cnt by 10 days intervals")
-    _cnt_10d = TimerlikeCount("cnt_10d")
-    _time_profiler.add(_cnt_10d, info = "cnt_10d")
     _t_errors_1d = ProfilingTimer("day_site_errors_cnt_1d")
     _time_profiler.add(_t_errors_1d, info = "get data from day_site_errors_cnt by 1 days intervals")
-    _cnt_1d = TimerlikeCount("cnt_1d")
-    _time_profiler.add(_cnt_1d, info = "cnt_1d")
     _t_errors_30m = ProfilingTimer("day_site_errors_cnt_30m")
     _time_profiler.add(_t_errors_30m, info = "get data from day_site_errors_cnt by 30 minutes intervals")
-    _cnt_30m = TimerlikeCount("cnt_30m")
-    _time_profiler.add(_cnt_30m, info = "cnt_30m")
     _t_errors_1m = ProfilingTimer("day_site_errors_cnt_1m")
     _time_profiler.add(_t_errors_1m, info = "get data from day_site_errors_cnt by 1 minute intervals")
-    _cnt_1m = TimerlikeCount("cnt_1m")
-    _time_profiler.add(_cnt_1m, info = "cnt_1m")
     _t_hist = ProfilingTimer("histogram_DBquery")
     _time_profiler.add(_t_hist, info = "creation of error count timeline histogram")
     _t_hist_processing = ProfilingTimer("histogram_processing")
@@ -4084,7 +4090,8 @@ def errorSummary(request):
         """
             Get intervals dictionaries for date slice
         """
-        intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(start, stop)        
+        # intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(start, stop)        
+        entry_points = __get_interval_entry_points(start, stop)
         
         ranged_query = not (__isMidnight(start) and __isMidnight(stop))
 
@@ -4135,42 +4142,50 @@ def errorSummary(request):
             if we have to address to more than one partition - (date,interval)
             - Using dates_for_interval to get time slice within one day (onme partition) 
             """
+            
+            
             _t_archived_jobs.start()
-            for key, value in date_entries.iteritems():
-                if key == '10d': _t_errors_10d.start()
-                if key == '1d' : _t_errors_1d.start()
-                if (len(value) > 0):
-                    for i in range(0, len(value)):
-                        querySet = model.objects.filter(date__eq=value[i], interval__eq = key).limit(JOB_LIMIT)
-                        nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
-                        if len(nosql_error_list) >= JOB_LIMIT:
-                            nosql_error_list = nosql_error_list[:JOB_LIMIT]
-                            break
-                if key == '10d' : _t_errors_10d.stop()
-                if key == '1d' : _t_errors_1d.stop()
-            for key, value in day_time_range.iteritems():
-                if key == '30m' : _t_errors_30m.start()
-                if key == '1m' : _t_errors_1m.start()
-                querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key).limit(JOB_LIMIT), value[0], value[1])
-                nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))       
+            for item in entry_points:
+                querySet = __restrictToInterval(model.objects.filter(date__eq=item['date'], interval__eq = item['interval'])).limit(JOB_LIMIT)
+                nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
                 if len(nosql_error_list) >= JOB_LIMIT:
-                    nosql_error_list = nosql_error_list[:JOB_LIMIT]
-                    break                                                           
-                if key == '30m' :_t_errors_30m.stop()
-                if key == '1m' : _t_errors_1m.stop()
+                   nosql_error_list = nosql_error_list[:JOB_LIMIT]
+                   break
+#             for key, value in date_entries.iteritems():
+#                 if key == '10d': _t_errors_10d.start()
+#                 if key == '1d' : _t_errors_1d.start()
+#                 if (len(value) > 0):
+#                     for i in range(0, len(value)):
+#                         querySet = model.objects.filter(date__eq=value[i], interval__eq = key).limit(JOB_LIMIT)
+#                         nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
+#                         if len(nosql_error_list) >= JOB_LIMIT:
+#                             nosql_error_list = nosql_error_list[:JOB_LIMIT]
+#                             break
+#                 if key == '10d' : _t_errors_10d.stop()
+#                 if key == '1d' : _t_errors_1d.stop()
+#             for key, value in day_time_range.iteritems():
+#                 if key == '30m' : _t_errors_30m.start()
+#                 if key == '1m' : _t_errors_1m.start()
+#                 querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key).limit(JOB_LIMIT), value[0], value[1])
+#                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))       
+#                 if len(nosql_error_list) >= JOB_LIMIT:
+#                     nosql_error_list = nosql_error_list[:JOB_LIMIT]
+#                     break                                                           
+#                 if key == '30m' :_t_errors_30m.stop()
+#                 if key == '1m' : _t_errors_1m.stop()
             _t_archived_jobs.stop()
             
-            _t_static_errors.start()
-            static_errors = []
-            for date in dates:
-                querySet = model.objects.filter(date=date, interval=interval).limit(JOB_LIMIT)
-                querySet = __restrictToInterval(querySet, start, stop)
-                static_errors.extend(list(querySet.timeout(None).values_list(*fields)))
-                if len(static_errors) >= JOB_LIMIT:
-                    static_errors = static_errors[:JOB_LIMIT]
-                    break
-            _t_static_errors.stop()
-            _t_static_errors_cnt.set(len(static_errors))
+#             _t_static_errors.start()
+#             static_errors = []
+#             for date in dates:
+#                 querySet = model.objects.filter(date=date, interval=interval).limit(JOB_LIMIT)
+#                 querySet = __restrictToInterval(querySet, start, stop)
+#                 static_errors.extend(list(querySet.timeout(None).values_list(*fields)))
+#                 if len(static_errors) >= JOB_LIMIT:
+#                     static_errors = static_errors[:JOB_LIMIT]
+#                     break
+#             _t_static_errors.stop()
+#             _t_static_errors_cnt.set(len(static_errors))
           
 #             """
 #             Building dictionary for error's histogram
