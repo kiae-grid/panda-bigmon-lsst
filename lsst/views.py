@@ -3958,6 +3958,10 @@ def errorSummary(request):
     _time_profiler.add(_t_jobs, info = "job selection from DB")
     _t_archived_jobs = ProfilingTimer("archived_jobs_DBquery")
     _time_profiler.add(_t_archived_jobs, info = "archived job selection from DB")
+    _t_static_errors = ProfilingTimer("static_errors")
+    _time_profiler.add(_t_static_errors, info = "errors by static intervals")
+    _t_static_errors_cnt = ProfilingTimer("static_errors_cnt")
+    _time_profiler.add(_t_static_errors_cnt, info = "number of errors by static intervals")
     _t_errors_10d = ProfilingTimer("day_site_errors_cnt_10d")
     _time_profiler.add(_t_errors_10d, info = "get data from day_site_errors_cnt by 10 days intervals")
     _cnt_10d = TimerlikeCount("cnt_10d")
@@ -4155,7 +4159,20 @@ def errorSummary(request):
                 if key == '30m' :_t_errors_30m.stop()
                 if key == '1m' : _t_errors_1m.stop()
             _t_archived_jobs.stop()
-
+            
+            _t_static_errors.start()
+            static_errors = []
+            nosql_interval = '30m'
+            for date in dates:
+                querySet = model.objects.filter(date=date, interval=nosql_interval).limit(JOB_LIMIT)
+                querySet = __restrictToInterval(querySet, start, stop)
+                static_errors.extend(list(querySet.timeout(None).values_list(*fields)))
+                if len(static_errors) >= JOB_LIMIT:
+                    static_errors = static_errors[:JOB_LIMIT]
+                    break
+            _t_static_errors_cnt = len(_t_static_errors)
+            _t_static_errors.stop()
+            
             """
             Building dictionary for error's histogram
             using date_for_interval dictionary.
