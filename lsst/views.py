@@ -3935,7 +3935,7 @@ def __getDateTimeIntervals(start, stop):
     
     return intervals_diff, date_entries, day_time_range
 
-def __get_interval_entry_points(start, stop):
+def __get_interval_entry_points(start_date, end_date):
     entry_points = []
     while (relativedelta(end_date, start_date).days >= 10):
         entry_points.append({'date' : start_date, 'interval' : '10d'})
