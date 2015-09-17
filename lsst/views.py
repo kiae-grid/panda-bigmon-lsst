@@ -3960,7 +3960,7 @@ def errorSummary(request):
     _time_profiler.add(_t_archived_jobs, info = "archived job selection from DB")
     _t_static_errors = ProfilingTimer("static_errors")
     _time_profiler.add(_t_static_errors, info = "errors by static intervals")
-    _t_static_errors_cnt = ProfilingTimer("static_errors_cnt")
+    _t_static_errors_cnt = TimerlikeCount("static_errors_cnt")
     _time_profiler.add(_t_static_errors_cnt, info = "number of errors by static intervals")
     _t_errors_10d = ProfilingTimer("day_site_errors_cnt_10d")
     _time_profiler.add(_t_errors_10d, info = "get data from day_site_errors_cnt by 10 days intervals")
