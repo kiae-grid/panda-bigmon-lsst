@@ -3937,13 +3937,13 @@ def __getDateTimeIntervals(start, stop):
 
 def __get_interval_entry_points(start_date, end_date):
     entry_points = []
-    while (relativedelta(end_date, start_date).days >= 10):
+    while ((end_date - start_date).days / 10 > 0):
         entry_points.append({'date' : start_date, 'interval' : '10d'})
         start_date = start_date + relativedelta(days=+10)
-    while (relativedelta(end_date, start_date).days < 10 and relativedelta(end_date, start_date).days >= 1):
+    while ((end_date - start_date).days < 10 and (end_date - start_date).days > 0):
         entry_points.append({'date' : start_date, 'interval' : '1d'})
         start_date = start_date + relativedelta(days=+1)
-    while (relativedelta(end_date, start_date).days < 1 and relativedelta(end_date, start_date).minutes >= 30):
+    while ((end_date - start_date).days == 0 and relativedelta(end_date, start_date).minutes >= 30):
         entry_points.append({'date' : start_date, 'interval' : '30m'})
     if (relativedelta(end_date, start_date).minutes < 30 and relativedelta(end_date, start_date).minutes > 1):
         entry_points.append({'date' : start_date, 'interval' : '1m'})
