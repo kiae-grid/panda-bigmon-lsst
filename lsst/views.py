@@ -4162,9 +4162,8 @@ def errorSummary(request):
             
             _t_static_errors.start()
             static_errors = []
-            nosql_interval = '30m'
             for date in dates:
-                querySet = model.objects.filter(date=date, interval=nosql_interval).limit(JOB_LIMIT)
+                querySet = model.objects.filter(date=date, interval=interval).limit(JOB_LIMIT)
                 querySet = __restrictToInterval(querySet, start, stop)
                 static_errors.extend(list(querySet.timeout(None).values_list(*fields)))
                 if len(static_errors) >= JOB_LIMIT:
