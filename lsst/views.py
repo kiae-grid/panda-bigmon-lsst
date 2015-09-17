@@ -4171,7 +4171,8 @@ def errorSummary(request):
                     static_errors = static_errors[:JOB_LIMIT]
                     break
             _t_static_errors.stop()
-            _t_static_errors_cnt = len(static_errors)            
+            _t_static_errors_cnt.set(len(static_errors))
+          
             """
             Building dictionary for error's histogram
             using date_for_interval dictionary.
