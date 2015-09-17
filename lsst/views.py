@@ -3935,7 +3935,7 @@ def __getDateTimeIntervals(start, stop):
     
     return intervals_diff, date_entries, day_time_range
 
-def __get_interval_entry_points(start_date, end_date):
+def __get_interval_entry_points(start_date, end_date, interval):
     entry_points = []
     while ((end_date - start_date).days / 10 > 0 and interval == '10d'):
         entry_points.append({'date' : start_date, 'interval' : '10d'})
@@ -4091,7 +4091,7 @@ def errorSummary(request):
             Get intervals dictionaries for date slice
         """
         # intervals_diff, date_entries, day_time_range = __getDateTimeIntervals(start, stop)        
-        entry_points = __get_interval_entry_points(start, stop)
+        entry_points = __get_interval_entry_points(start, stop, interval)
         
         ranged_query = not (__isMidnight(start) and __isMidnight(stop))
 
