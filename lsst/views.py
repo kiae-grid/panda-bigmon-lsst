@@ -3940,7 +3940,7 @@ def __get_interval_entry_points(start_date, end_date, interval):
     while ((end_date - start_date).days / 10 > 0 and interval == '10d'):
         entry_points.append({'date' : start_date, 'interval' : '10d'})
         start_date = start_date + relativedelta(days=+10)
-    while ((end_date - start_date).days < 10 and (end_date - start_date).days > 0):
+    while ((end_date - start_date).days > 0):
         entry_points.append({'date' : start_date, 'interval' : '1d'})
         start_date = start_date + relativedelta(days=+1)
     while ((end_date - start_date).days == 0 and relativedelta(end_date, start_date).minutes >= 30):
