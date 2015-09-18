@@ -3936,17 +3936,19 @@ def __getDateTimeIntervals(start, stop):
     return intervals_diff, date_entries, day_time_range
 
 def __get_interval_entry_points(start_date, end_date, interval):
+    start = datetime.datetime(start_date.year, start_date.month, start_date.day, 0, 0)
     entry_points = []
-    while ((end_date - start_date).days / 10 > 0 and interval == '10d'):
-        entry_points.append({'date' : start_date, 'interval' : '10d'})
-        start_date = start_date + relativedelta(days=+10)
-    while ((end_date - start_date).days > 0):
-        entry_points.append({'date' : start_date, 'interval' : '1d'})
-        start_date = start_date + relativedelta(days=+1)
-    while ((end_date - start_date).days == 0 and relativedelta(end_date, start_date).minutes >= 30):
-        entry_points.append({'date' : start_date, 'interval' : '30m'})
-    if (relativedelta(end_date, start_date).minutes < 30 and relativedelta(end_date, start_date).minutes > 1):
-        entry_points.append({'date' : start_date, 'interval' : '1m'})
+    while ((end_date - start).days / 10 > 0 and interval == '10d'):
+        entry_points.append({'date' : start, 'interval' : '10d', 'start': datetime.datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)})
+        start = start + relativedelta(days=+10)
+    while ((end_date - start).days > 0):
+        entry_points.append({'date' : start, 'interval' : interval, 'start': datetime.datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)})
+        start = start + relativedelta(days=+1)
+    if ((end_date - start).days == 0 and (relativedelta(end_date, start).hours + (relativedelta(end_date, start).minutes/30)) >= 1):
+        entry_points.append({'date' : start, 'interval' : '30m', 'start': datetime.datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)})
+    tmp = datetime.datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)
+    if (relativedelta(end_date, tmp).minutes >= 1):
+        entry_points.append({'date' : start, 'interval' : '1m', 'start': datetime.datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)})
     return entry_points
 
 def errorSummary(request):
@@ -4146,7 +4148,7 @@ def errorSummary(request):
             
             _t_archived_jobs.start()
             for item in entry_points:
-                querySet = __restrictToInterval(model.objects.filter(date__eq=item['date'], interval__eq = item['interval']), start, stop).limit(JOB_LIMIT)
+                querySet = __restrictToInterval(model.objects.filter(date__eq=item['date'], interval__eq = item['interval']), item['start'], stop).limit(JOB_LIMIT)
                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
                 if len(nosql_error_list) >= JOB_LIMIT:
                    nosql_error_list = nosql_error_list[:JOB_LIMIT]
