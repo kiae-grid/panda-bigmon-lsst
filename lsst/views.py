@@ -3939,16 +3939,21 @@ def __get_interval_entry_points(start_date, end_date, interval):
     start = datetime(start_date.year, start_date.month, start_date.day, 0, 0)
     entry_points = []
     while ((end_date - start).days / 10 > 0 and interval == '10d'):
-        entry_points.append({'date' : start, 'interval' : '10d', 'start': datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)})
+        start_hm = datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)
+        entry_points.append({'date' : start, 'interval' : interval, 'start': start_hm})
         start = start + relativedelta(days=+10)
     while ((end_date - start).days > 0):
-        entry_points.append({'date' : start, 'interval' : interval, 'start': datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)})
+        if interval == '10d': interval = '1d'
+        start_hm = datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)
+        entry_points.append({'date' : start, 'interval' : interval, 'start': start_hm})
         start = start + relativedelta(days=+1)
     if ((end_date - start).days == 0 and (relativedelta(end_date, start).hours + (relativedelta(end_date, start).minutes/30)) >= 1):
-        entry_points.append({'date' : start, 'interval' : '30m', 'start': datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)})
+        start_hm = datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)
+        entry_points.append({'date' : start, 'interval' : '30m', 'start': start_hm})
     tmp = datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)
     if (relativedelta(end_date, tmp).minutes >= 1):
-        entry_points.append({'date' : start, 'interval' : '1m', 'start': datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)})
+        start_hm = datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)
+        entry_points.append({'date' : start, 'interval' : '1m', 'start': start_hm})
     return entry_points
 
 def errorSummary(request):
