@@ -3936,7 +3936,7 @@ def __getDateTimeIntervals(start, stop):
     return intervals_diff, date_entries, day_time_range
 
 def __get_interval_entry_points(start_date, end_date, interval):
-    start = datetime.datetime(start_date.year, start_date.month, start_date.day, 0, 0)
+    start = datetime(start_date.year, start_date.month, start_date.day, 0, 0)
     entry_points = []
     while ((end_date - start).days / 10 > 0 and interval == '10d'):
         entry_points.append({'date' : start, 'interval' : '10d', 'start': datetime.datetime(start.year, start.month, start.day, start_date.hour, start_date.minute)})
