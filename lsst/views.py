@@ -3849,7 +3849,7 @@ def errorSummary(request):
     global dbaccess
 
     # NB: bump this every time you add a new profiling timer
-    metadata_gen = "4"
+    metadata_gen = "5"
 
     valid, response = initRequest(request)
     if not valid: return response
@@ -3932,6 +3932,12 @@ def errorSummary(request):
         if nosql_type in legacy_summary_processor_names:
             nosql_type = legacy_summary_processor_names[nosql_type]
 
+        if nosql_type in nosql_summary_processors.keys():
+            _t_nosql_processing = {}
+            for table in nosql_summary_processors[nosql_type].keys():
+                _t_nosql_processing[table] = ProfilingTimer("%s_processing_time" % (table))
+                _time_profiler.add(_t_nosql_processing[table], info = "processing time for %s view" % (table))
+
         keyspace = 'cassandra'
         if 'keyspace' in requestParams:
             keyspace = requestParams['keyspace']
@@ -3991,8 +3997,6 @@ def errorSummary(request):
     # The below code assumes that at this point jobs will contain all
     # non-historic (non-archived) data, so, please, don't break this.
 
-    # XXX: TODO: must measure execution/transform times for individual tables
-
     if nosql:
         # Save current (non-archived) jobs for histogram creation.
         errJobs = __onlyErrorJobs(jobs, testjobs, requestParams)
@@ -4013,6 +4017,7 @@ def errorSummary(request):
             nosqlErrorsBy = {}
             nosql_returned_rows = 0
             for table in processors.keys():
+                _t_nosql_processing[table].start()
                 processor = processors[table]
                 fields = processor['fields']
                 model = processor['model']
@@ -4028,6 +4033,7 @@ def errorSummary(request):
                 # TODO: perhaps we need per-table row counts too
                 nosql_returned_rows += len(nosql_error_list)
                 nosql_error_list = None
+                _t_nosql_processing[table].stop()
         else:
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
 
@@ -4080,8 +4086,11 @@ def errorSummary(request):
         jc = {}
         cnt = 0
         for table, processor in processors.items():
+            _t_nosql_processing[table].start()
             jc[table] = processor['jobcount'](nosqlErrorsBy[table])
             nosql_jobs_count = jc[table]
+            _t_nosql_processing[table].stop()
+        _logger.info("Job counts: %s" % (jc))
         for table, n in jc.items():
             if n != nosql_jobs_count:
                 raise RuntimeError("Different job counts from NoSQL tables: %s" % (str(jc)))
@@ -4105,9 +4114,11 @@ def errorSummary(request):
     if nosql and nosql_type in nosql_summary_processors.keys():
         procerrors = nosql_summary_processors[nosql_type]
         for table in processors.keys():
+            _t_nosql_processing[table].start()
             errsByAnything[table] = {}
             handler = processors[table]['handler']
             errsByAnything[table] = handler(nosqlErrorsBy[table])
+            _t_nosql_processing[table].stop()
     errJobs = __onlyErrorJobs(jobs, testjobs, requestParams)
     if not errHistIsDone:
         _t_hist.start()
