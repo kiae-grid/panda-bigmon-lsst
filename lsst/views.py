@@ -3399,7 +3399,7 @@ def jobStateSummary(jobs):
     return statecount
 
 
-def errorSummaryDict(request, errJobs, tasknamedict, errsBySite, t_summary):
+def errorSummaryDict(request, errJobs, tasknamedict, errsBySite, errsByUser, t_summary):
     """
     Take a job list and produce error summaries from it.
 
@@ -3408,12 +3408,13 @@ def errorSummaryDict(request, errJobs, tasknamedict, errsBySite, t_summary):
      - errJobs: list of jobs that are considered to have errors
      - tasknamedict: hash with task name mapping
      - errsBySite: hash that holds already filled parts of
-       by-site errors (that may come from NoSQL)
+       per-site errors (that may come from NoSQL)
+     - errsByUser: hash that holds already filled parts of
+       per-user errors (that may come from NoSQL)
      - t_summary: timer for summary table
     """
 
     errsByCount = {}
-    errsByUser = {}
     errsByTask = {}
     sumd = {}
     flist = [ 'cloud', 'computingsite', 'produsername', 'taskid', 'jeditaskid', 'processingtype', 'prodsourcelabel', 'transformation', 'workinggroup', 'specialhandling', 'jobstatus' ]
@@ -3690,6 +3691,68 @@ def __nosqlDaySiteErrorsCntJobcount(error_list):
     return retval
 
 
+
+def __nosqlDayUserErrorsCnt(error_list):
+    """
+    Builds error list via day_site_errors_cnt-like NoSQL table
+
+    Arguments:
+     - error_list: list with NoSQL query results
+
+    Returns errsByUser-like hash that can be used inside
+    errorSummaryDict().
+
+    NB: sync field list with variable nosql_summary_processors
+    from errorSummary().
+    """
+
+    errsByUser = {}
+    ecl_map = __errorcodelist2nameDict(errorcodelist)
+    not_an_error = frozenset((0, '0', None))
+
+    for username, errcode, diag, err_count, job_count in error_list:
+        errname, errnum = errcode.split(":")
+        if errnum in not_an_error:
+            continue
+
+        if username not in errsByUser:
+            errsByUser[username] = {
+              'name':		username,
+              'errors':		{},
+              'toterrors':	0,
+              'toterrjobs':	0,
+            }
+        if errcode not in errsByUser[username]['errors']:
+            errsByUser[username]['errors'][errcode] = {
+              'error':		errcode,
+              'codename':	ecl_map[errname],
+              'codeval':	errnum,
+              'diag':		diag,
+              'count':		0,
+            }
+
+        errsByUser[username]['errors'][errcode]['count'] += err_count
+        errsByUser[username]['toterrors'] += err_count
+        errsByUser[username]['toterrjobs'] += job_count
+
+    return errsByUser
+
+
+def __nosqlDayUserErrorsCntJobcount(error_list):
+    """
+    Counts number of jobs aggregated inside
+    day_user_errors_cnt-like NoSQL table
+
+    Arguments:
+     - error_list: list with NoSQL query results
+    """
+
+    retval = 0
+    for user, errcode, diag, err_count, job_count in error_list:
+        retval += job_count
+    return retval
+
+
 def getTaskName(tasktype,taskid):
     taskname = ''
     if tasktype == 'taskid':
@@ -3831,27 +3894,48 @@ def errorSummary(request):
 
     nosql = 'nosql' in requestParams
     if nosql:
-        nosql_type = requestParams['nosql']
         from core.pandajob.cassandra_models import day_errors_30m
         from core.pandajob.cassandra_models import day_site_errors_cnt
+        from core.pandajob.cassandra_models import day_user_errors_cnt
         from core.pandajob.cassandra_models import jobs as nosql_jobs
         from lsst.cassandra_helpers import connectToCassandra, cqlValuesDict
+
+        legacy_summary_processor_names = {
+          'day_site_errors_cnt': 'day_anything_errors_cnt',
+          'day_user_errors_cnt': 'day_anything_errors_cnt',
+        }
+
+        nosql_summary_processors = {
+          'day_anything_errors_cnt': {
+            'site': {
+              'model': day_site_errors_cnt,
+              'handler': __nosqlDaySiteErrorsCnt,
+              'jobcount': __nosqlDaySiteErrorsCntJobcount,
+              'fields': [
+                'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
+              ],
+            },
+            'user': {
+              'model': day_user_errors_cnt,
+              'handler': __nosqlDayUserErrorsCnt,
+              'jobcount': __nosqlDayUserErrorsCntJobcount,
+              'fields': [
+                'produsername', 'errcode', 'diag', 'err_count', 'job_count'
+              ],
+            },
+          },
+        }
+
+        nosql_type = requestParams['nosql']
+        # XXX: we should slowly phase out support for legacy names as it was
+        # XXX: used only for testing, not in any real production.
+        if nosql_type in legacy_summary_processor_names:
+            nosql_type = legacy_summary_processor_names[nosql_type]
 
         keyspace = 'cassandra'
         if 'keyspace' in requestParams:
             keyspace = requestParams['keyspace']
         connectToCassandra(dbaccess, sectionName = keyspace)
-
-        nosql_summary_processors = {
-          'day_site_errors_cnt': {
-            'model': day_site_errors_cnt,
-            'handler': __nosqlDaySiteErrorsCnt,
-            'jobcount': __nosqlDaySiteErrorsCntJobcount,
-            'fields': [
-              'computingsite', 'errcode', 'diag', 'err_count', 'job_count'
-            ],
-          },
-        }
 
     testjobs = False
     if 'prodsourcelabel' in requestParams and requestParams['prodsourcelabel'].lower().find('test') >= 0:
@@ -3907,6 +3991,8 @@ def errorSummary(request):
     # The below code assumes that at this point jobs will contain all
     # non-historic (non-archived) data, so, please, don't break this.
 
+    # XXX: TODO: must measure execution/transform times for individual tables
+
     if nosql:
         # Save current (non-archived) jobs for histogram creation.
         errJobs = __onlyErrorJobs(jobs, testjobs, requestParams)
@@ -3922,19 +4008,26 @@ def errorSummary(request):
             jobs.extend(nosqlJobs)
             nosql_returned_rows = len(nosqlJobs)
         elif nosql_type in nosql_summary_processors.keys():
-            processor = nosql_summary_processors[nosql_type]
+            processors = nosql_summary_processors[nosql_type]
 
-            fields = processor['fields']
-            model = processor['model']
-            nosql_error_list = []
-            for date in dates:
-                querySet = model.objects.filter(date=date, interval=nosql_interval).limit(JOB_LIMIT)
-                querySet = __restrictToInterval(querySet, start, stop)
-                nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
-                if len(nosql_error_list) >= JOB_LIMIT:
-                    nosql_error_list = nosql_error_list[:JOB_LIMIT]
-                    break
-            nosql_returned_rows = len(nosql_error_list)
+            nosqlErrorsBy = {}
+            nosql_returned_rows = 0
+            for table in processors.keys():
+                processor = processors[table]
+                fields = processor['fields']
+                model = processor['model']
+                nosql_error_list = []
+                for date in dates:
+                    querySet = model.objects.filter(date=date, interval=nosql_interval).limit(JOB_LIMIT)
+                    querySet = __restrictToInterval(querySet, start, stop)
+                    nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
+                    if len(nosql_error_list) >= JOB_LIMIT:
+                        nosql_error_list = nosql_error_list[:JOB_LIMIT]
+                        break
+                nosqlErrorsBy[table] = nosql_error_list
+                # TODO: perhaps we need per-table row counts too
+                nosql_returned_rows += len(nosql_error_list)
+                nosql_error_list = None
         else:
             raise ValueError("Unknown NoSQL processing type '%s'" % (nosql_type))
 
@@ -3983,8 +4076,15 @@ def errorSummary(request):
     # Pre-processed error tables from NoSQL need special handling
     # of job count since they carry aggregated information.
     if nosql and nosql_type in nosql_summary_processors.keys():
-        processor = nosql_summary_processors[nosql_type]
-        nosql_jobs_count = processor['jobcount'](nosql_error_list)
+        processors = nosql_summary_processors[nosql_type]
+        jc = {}
+        cnt = 0
+        for table, processor in processors.items():
+            jc[table] = processor['jobcount'](nosqlErrorsBy[table])
+            nosql_jobs_count = jc[table]
+        for table, n in jc.items():
+            if n != nosql_jobs_count:
+                raise RuntimeError("Different job counts from NoSQL tables: %s" % (str(jc)))
     total_jobs_count = len(jobs) + nosql_jobs_count
     _cnt_total_jobs.set(total_jobs_count)
     _cnt_nosql_returned_rows.set(nosql_returned_rows)
@@ -4001,17 +4101,21 @@ def errorSummary(request):
 
     ## Build the error summary.
     _t_error_summary_processing.start()
-    errsBySite = {}
+    errsByAnything = {}
     if nosql and nosql_type in nosql_summary_processors.keys():
-        handler = nosql_summary_processors[nosql_type]['handler']
-        errsBySite = handler(nosql_error_list)
+        procerrors = nosql_summary_processors[nosql_type]
+        for table in processors.keys():
+            errsByAnything[table] = {}
+            handler = processors[table]['handler']
+            errsByAnything[table] = handler(nosqlErrorsBy[table])
     errJobs = __onlyErrorJobs(jobs, testjobs, requestParams)
     if not errHistIsDone:
         _t_hist.start()
         errHist = errorHistogram(errJobs, errHist)
         _t_hist.stop()
     errsByCount, errsBySite, errsByUser, errsByTask, sumd = \
-      errorSummaryDict(request, errJobs, tasknamedict, errsBySite,
+      errorSummaryDict(request, errJobs, tasknamedict,
+      errsByAnything['site'], errsByAnything['user'],
       _t_summary)
     _t_error_summary_processing.stop()
 
