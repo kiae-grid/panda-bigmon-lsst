@@ -3983,14 +3983,6 @@ def errorSummary(request):
     _time_profiler.add(_t_static_errors, info = "errors by static intervals")
     _t_static_errors_cnt = TimerlikeCount("static_errors_cnt")
     _time_profiler.add(_t_static_errors_cnt, info = "number of errors by static intervals")
-    _t_errors_10d = ProfilingTimer("day_site_errors_cnt_10d")
-    _time_profiler.add(_t_errors_10d, info = "get data from day_site_errors_cnt by 10 days intervals")
-    _t_errors_1d = ProfilingTimer("day_site_errors_cnt_1d")
-    _time_profiler.add(_t_errors_1d, info = "get data from day_site_errors_cnt by 1 days intervals")
-    _t_errors_30m = ProfilingTimer("day_site_errors_cnt_30m")
-    _time_profiler.add(_t_errors_30m, info = "get data from day_site_errors_cnt by 30 minutes intervals")
-    _t_errors_1m = ProfilingTimer("day_site_errors_cnt_1m")
-    _time_profiler.add(_t_errors_1m, info = "get data from day_site_errors_cnt by 1 minute intervals")
     _t_hist = ProfilingTimer("histogram_DBquery")
     _time_profiler.add(_t_hist, info = "creation of error count timeline histogram")
     _t_hist_processing = ProfilingTimer("histogram_processing")
@@ -4020,7 +4012,7 @@ def errorSummary(request):
     nosql = 'nosql' in requestParams
     if nosql:
         nosql_type = requestParams['nosql']
-        from core.pandajob.cassandra_models import day_site_errors_cnt, day_errors_30m
+        from core.pandajob.cassandra_models import day_site_errors_cnt, day_errors_cnt
         from core.pandajob.cassandra_models import jobs as nosql_jobs
         from lsst.cassandra_helpers import connectToCassandra, cqlValuesDict
 
@@ -4158,28 +4150,6 @@ def errorSummary(request):
                 if len(nosql_error_list) >= JOB_LIMIT:
                    nosql_error_list = nosql_error_list[:JOB_LIMIT]
                    break
-#             for key, value in date_entries.iteritems():
-#                 if key == '10d': _t_errors_10d.start()
-#                 if key == '1d' : _t_errors_1d.start()
-#                 if (len(value) > 0):
-#                     for i in range(0, len(value)):
-#                         querySet = model.objects.filter(date__eq=value[i], interval__eq = key).limit(JOB_LIMIT)
-#                         nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
-#                         if len(nosql_error_list) >= JOB_LIMIT:
-#                             nosql_error_list = nosql_error_list[:JOB_LIMIT]
-#                             break
-#                 if key == '10d' : _t_errors_10d.stop()
-#                 if key == '1d' : _t_errors_1d.stop()
-#             for key, value in day_time_range.iteritems():
-#                 if key == '30m' : _t_errors_30m.start()
-#                 if key == '1m' : _t_errors_1m.start()
-#                 querySet = __restrictToInterval(model.objects.filter(date__eq=value[0], interval__eq = key).limit(JOB_LIMIT), value[0], value[1])
-#                 nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))       
-#                 if len(nosql_error_list) >= JOB_LIMIT:
-#                     nosql_error_list = nosql_error_list[:JOB_LIMIT]
-#                     break                                                           
-#                 if key == '30m' :_t_errors_30m.stop()
-#                 if key == '1m' : _t_errors_1m.stop()
             _t_archived_jobs.stop()
             
 #             _t_static_errors.start()
@@ -4194,21 +4164,21 @@ def errorSummary(request):
 #             _t_static_errors.stop()
 #             _t_static_errors_cnt.set(len(static_errors))
           
-#             """
-#             Building dictionary for error's histogram
-#             using date_for_interval dictionary.
-#             Multi-get request to <day_site_errors_cnt> datatable.
-#             """
-#             errHist = []
-#             _t_hist.start()
-#             for item in dates_for_interval:
-#                 querySet = model.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval).limit(JOB_LIMIT)
-#                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'err_count')))
-#             _t_hist.stop()
-#             nosql_hist_count = len(errHist)
-#             _t_hist_processing.start()
-#             errHist = errorHistogram(errJobs, errHist)
-#             _t_hist_processing.stop()
+            """
+            Building dictionary for error's histogram
+            using date_for_interval dictionary.
+            Multi-get request to <day_site_errors_cnt> datatable.
+            """
+            errHist = []
+            _t_hist.start()
+            for item in dates_for_interval:
+                querySet = __restrictToInterval(day_errors_cnt.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval)).limit(JOB_LIMIT)
+                errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'count')))
+            _t_hist.stop()
+            nosql_hist_count = len(errHist)
+            _t_hist_processing.start()
+            errHist = errorHistogram(errJobs, errHist)
+            _t_hist_processing.stop()
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
 #                 if processor['base_mtime range query?']:
