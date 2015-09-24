@@ -3904,6 +3904,12 @@ def errorSummary(request):
     # XXX: than OS/FS limits.
     (_tp_file, _tp_metadata) = \
       __makeTimeProfilerConf("errors", metadata_gen, request)
+    if 'time_profiler_output' in requestParams:
+        _tp_candidate = requestParams['time_profiler_output']
+        if not re.search(r'^[-0-9a-zA-Z_.]+$', _tp_candidate) or \
+           _tp_candidate in ('.', '..'):
+            raise RuntimeError("Bad value for time_profiler_output: %s" % (_tp_candidate))
+        _tp_file = os.path.join(LOG_ROOT, _tp_candidate)
     _time_profiler = TimeProfiler(_tp_file, _tp_metadata)
     _t_total = ProfilingTimer("total_time")
     _time_profiler.add(_t_total, info = "walltime for errorSummary()")
