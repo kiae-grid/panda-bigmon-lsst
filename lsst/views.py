@@ -8,6 +8,8 @@ from socket import gethostname
 
 import hashlib
 
+import calendar
+
 from django.http import HttpResponse, QueryDict
 from django.shortcuts import render_to_response, render, redirect
 from django.template import RequestContext, loader
@@ -134,7 +136,46 @@ def __str2datetime(x, fmt):
     return datetime.utcfromtimestamp(time.mktime(time.strptime(x, fmt)))
 
 
-def __makeDateRange(start, stop, out_fmt):
+def __datetimeFloor(dt, alignment):
+    """
+    Rounds datetime to the nearest point that corresponds to the
+    round number of seconds that are given by 'alignment' and
+    is below or equal to the given datetime.
+
+    We assume UTC.
+
+    Arguments:
+     - dt: datetime object to use;
+     - alignment: a single "time tick" in seconds.
+    """
+
+    assert (alignment != 0)
+    tstamp = calendar.timegm(dt.timetuple())
+    return datetime.utcfromtimestamp((tstamp / alignment) * alignment)
+
+
+def __datetimeCeil(dt, alignment):
+    """
+    Rounds datetime to the nearest point that corresponds to the
+    round number of seconds that are given by 'alignment' and
+    is above or equal to the given datetime.
+
+    We assume UTC.
+
+    Arguments:
+     - dt: datetime object to use;
+     - alignment: a single "time tick" in seconds.
+    """
+
+    assert (alignment != 0)
+    tstamp = calendar.timegm(dt.timetuple())
+    if tstamp % alignment == 0:
+        return dt
+    return datetime.utcfromtimestamp((1 + tstamp / alignment) * alignment)
+
+
+
+def __makeDateRange(start, stop, out_fmt, step):
     """
     Creates iterable that will yield all dates in a given range.
 
@@ -152,6 +193,8 @@ def __makeDateRange(start, stop, out_fmt):
      - out_fmt: format string for strftime to which we will
        transform each date from the provided range; the value
        of None instructs to leave datetime objects without conversion.
+     - step: date step.  We will select only dates that are aligned
+       to this step (in days); the last date will always be selected.
     """
 
     retval = []
@@ -166,9 +209,9 @@ def __makeDateRange(start, stop, out_fmt):
         date += day
 
     if out_fmt != None:
-        retval = map(lambda x: x.strftime(out_fmt), retval)
+        retval = [map(lambda x: x.strftime(out_fmt), retval)]
 
-    return retval
+    return [retval[i] for i in xrange(0, len(retval), step)]
 
 
 def __sliceDateRange(start, stop, out_fmt, step = 1):
@@ -3900,6 +3943,27 @@ def errorSummary(request):
         from core.pandajob.cassandra_models import jobs as nosql_jobs
         from lsst.cassandra_helpers import connectToCassandra, cqlValuesDict
 
+        supported_intervals = {
+          '30m': {
+           'alignment': 30 * 60,
+           'days-in-step': 1,
+          },
+          '1m': {
+           'alignment': 60,
+           'days-in-step': 1,
+          },
+          '1d': {
+           'alignment': 24 * 60 * 60,
+           'days-in-step': 1,
+          },
+          # For longer than day we still align dates to the day boundary,
+          # because aligning, e.g., to 10 days since Epoch isn't that bright.
+          '10d': {
+           'alignment': 24 * 60 * 60,
+           'days-in-step': 10,
+          },
+        }
+
         legacy_summary_processor_names = {
           'day_site_errors_cnt': 'day_anything_errors_cnt',
           'day_user_errors_cnt': 'day_anything_errors_cnt',
@@ -3971,10 +4035,29 @@ def errorSummary(request):
     dates = None
     start = None
     stop = None
-    nosql_interval = '30m'
     if nosql:
+        nosql_interval = '30m'
+        if 'nosql_interval' in requestParams:
+            nosql_interval = requestParams['nosql_interval']
+        if nosql_interval not in supported_intervals:
+            raise RuntimeException("Unsupported nosql_interval '%s'" % (nosql_interval))
+	_logger.debug("NoSQL aggregation interval is %s" % (nosql_interval))
+
+	# XXX: it is not that clean to mangle query['modificationtime__range']
+	# XXX: right here since something inside setupView() (that creates
+	# XXX: this parameter) can use it.
+	#
+	# TODO: Should inject NoSQL knowledge into setupView directly
+	# TODO: and align dates there.
+        align = supported_intervals[nosql_interval]['alignment']
+        (start, stop) = \
+          map(lambda x: datetime.strptime(x, defaultDatetimeFormat), query['modificationtime__range'])
+        query['modificationtime__range'] = map(lambda x: x.strftime(defaultDatetimeFormat),
+          (__datetimeFloor(start, align), __datetimeCeil(stop, align)))
+
         (start, stop) = query['modificationtime__range']
-        dates = __makeDateRange(start, stop, None)
+        dates = __makeDateRange(start, stop, None, \
+          supported_intervals[nosql_interval]['days-in-step'])
         fmt = defaultDatetimeFormat
         start = __str2datetime(start, fmt)
         stop = __str2datetime(stop, fmt)
@@ -4022,9 +4105,12 @@ def errorSummary(request):
                 fields = processor['fields']
                 model = processor['model']
                 nosql_error_list = []
+                _logger.debug("dates are %s" % (dates))
                 for date in dates:
                     querySet = model.objects.filter(date=date, interval=nosql_interval).limit(JOB_LIMIT)
                     querySet = __restrictToInterval(querySet, start, stop)
+                    # TODO: dump query parameters as well.
+                    _logger.debug("NoSQL query is %s" % (querySet))
                     nosql_error_list.extend(list(querySet.timeout(None).values_list(*fields)))
                     if len(nosql_error_list) >= JOB_LIMIT:
                         nosql_error_list = nosql_error_list[:JOB_LIMIT]
