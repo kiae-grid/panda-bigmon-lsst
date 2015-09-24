@@ -4174,6 +4174,9 @@ def errorSummary(request):
             for item in dates_for_interval:
                 querySet = day_errors_cnt.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval).limit(JOB_LIMIT)
                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'count')))
+                if len(errHist) >= JOB_LIMIT:
+                   errHist = errHist[:JOB_LIMIT]
+                   break
             _t_hist.stop()
             nosql_hist_count = len(errHist)
             _t_hist_processing.start()
