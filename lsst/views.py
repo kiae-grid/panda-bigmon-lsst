@@ -4169,19 +4169,19 @@ def errorSummary(request):
             using date_for_interval dictionary.
             Multi-get request to <day_site_errors_cnt> datatable.
             """
-            errHist = []
-            _t_hist.start()
-            for item in dates_for_interval:
-                querySet = day_errors_cnt.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval).limit(JOB_LIMIT)
-                errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'count')))
-                if len(errHist) >= JOB_LIMIT:
-                   errHist = errHist[:JOB_LIMIT]
-                   break
-            _t_hist.stop()
-            nosql_hist_count = len(errHist)
-            _t_hist_processing.start()
-            errHist = errorHistogram(errJobs, errHist)
-            _t_hist_processing.stop()
+#             errHist = []
+#             _t_hist.start()
+#             for item in dates_for_interval:
+#                 querySet = day_errors_cnt.objects.filter(date__eq=__str2datetime(item[0], fmt), interval__eq = interval).limit(JOB_LIMIT)
+#                 errHist.extend(list(querySet.timeout(None).values_list('base_mtime', 'count')))
+#                 if len(errHist) >= JOB_LIMIT:
+#                    errHist = errHist[:JOB_LIMIT]
+#                    break
+#             _t_hist.stop()
+#             nosql_hist_count = len(errHist)
+#             _t_hist_processing.start()
+#             errHist = errorHistogram(errJobs, errHist)
+#             _t_hist_processing.stop()
 #             querySet = model.objects.filter(date__in=dates).limit(JOB_LIMIT)
 #             if ranged_query:
 #                 if processor['base_mtime range query?']:
