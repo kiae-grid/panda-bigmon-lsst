@@ -4142,7 +4142,7 @@ def errorSummary(request):
             - Using dates_for_interval to get time slice within one day (onme partition) 
             """
             
-            
+            """
             _t_archived_jobs.start()
             for item in entry_points:
                 querySet = __restrictToInterval(model.objects.filter(date__eq=item['date'], interval__eq = item['interval']), item['start'], stop).limit(JOB_LIMIT)
@@ -4151,7 +4151,7 @@ def errorSummary(request):
                    nosql_error_list = nosql_error_list[:JOB_LIMIT]
                    break
             _t_archived_jobs.stop()
-            
+            """
 #             _t_static_errors.start()
 #             static_errors = []
 #             for date in dates:
