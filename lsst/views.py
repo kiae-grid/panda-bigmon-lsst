@@ -4046,7 +4046,8 @@ def errorSummary(request):
         if 'nosql_interval' in requestParams:
             nosql_interval = requestParams['nosql_interval']
         if nosql_interval not in supported_intervals:
-            raise RuntimeError("Unsupported nosql_interval '%s'" % (nosql_interval))
+            raise RuntimeError("Unsupported nosql_interval '%s', known are %s" % \
+              (nosql_interval, supported_intervals.keys()))
 	_logger.debug("NoSQL aggregation interval is %s" % (nosql_interval))
 
 	# XXX: it is not that clean to mangle query['modificationtime__range']
